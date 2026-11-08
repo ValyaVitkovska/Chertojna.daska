@@ -1,7 +1,7 @@
 /* Чертожна дъска – service worker
    ВАЖНО: при всяко ново качване на index.html увеличи номера на версията
    по-долу (v1 → v2 → v3 …), за да получат учениците обновлението. */
-const CACHE = 'chertozhna-daska-v1';
+const CACHE = 'chertozhna-daska-v3';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
