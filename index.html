@@ -195,6 +195,13 @@ details.help summary{cursor:pointer;color:var(--accent);font-weight:600;font-siz
 .showpanel{display:none;position:absolute;top:10px;right:12px;z-index:5;font-weight:600;font-size:14px;border:1.5px solid var(--accent);background:var(--panel);color:var(--accent);border-radius:10px;padding:8px 12px;cursor:pointer;box-shadow:0 3px 12px rgba(20,30,50,.12)}
 .app.wide .showpanel{display:block}
 .app.wide .toolbar{max-width:calc(100% - 200px)}
+.resume{position:fixed;inset:0;background:rgba(15,22,35,.45);display:grid;place-items:center;z-index:50;padding:16px}
+.resume-card{background:var(--panel);color:var(--ink);border-radius:16px;padding:22px 22px 18px;max-width:420px;width:100%;box-shadow:0 12px 40px rgba(15,22,35,.3);text-align:center}
+.resume-card img{width:96px;height:auto}
+.resume-card h2{margin:6px 0 6px;font-size:20px}
+.resume-card p{margin:0 0 16px;color:var(--ink-soft);font-size:14.5px}
+.resume-btns{display:flex;flex-direction:column;gap:8px}
+.resume-btns .ghost{font-size:14px;padding:9px 12px}
 .app.wide{grid-template-columns:1fr;grid-template-rows:1fr}
 .app.wide .panel{display:none}
 @media (max-width:760px){
@@ -321,6 +328,17 @@ details.help summary{cursor:pointer;color:var(--accent);font-weight:600;font-siz
   </main>
 </div>
 
+<div class="resume" id="resume" hidden>
+  <div class="resume-card" role="dialog" aria-modal="true" aria-labelledby="resumeTitle">
+    <img id="resumeImg" alt="">
+    <h2 id="resumeTitle">Продължаваме ли?</h2>
+    <p id="resumeText"></p>
+    <div class="resume-btns">
+      <button class="btn" type="button" id="resumeYes">Продължи откъдето спрях</button>
+      <button class="ghost" type="button" id="resumeNo">Започни отначало</button>
+    </div>
+  </div>
+</div>
 <script>
 (function(){
 'use strict';
@@ -2422,6 +2440,7 @@ function draw(){
   try{st.mode==='2d'?render2D(T):render3D(T);}catch(e){console.error(e);}
   ctx.globalAlpha=1;
   try{drawInk(T);}catch(e){console.error(e);}
+  if(typeof scheduleSave==='function')scheduleSave();
   $('#quick').hidden=!(st.mode==='2d'&&st.tool==='tangpoly'&&st.pending.length===1);
   updateReadouts();
 }
@@ -2895,7 +2914,68 @@ $('#geoNext').onclick=()=>{
 };
 
 buildToolbar();buildBoard();setTool('move');setMode('2d');savePage();updatePageBar();
-try{if(!localStorage.getItem('geoSeen')){localStorage.setItem('geoSeen','1');geo.open=true;geo.mode='task';geo.task='welcome';geoRender();}}catch(e){}
+/* ---------- autosave ---------- */
+const SAVE_KEY='chertozhna-daska-save';let saveReady=false,saveT=0;
+function hasContent(ps){return ps.some(p=>p.o2.length||p.o3.length||p.ink['2d'].length||p.ink['3d'].length||p.sliders.length);}
+function saveNow(){
+  if(!saveReady||st.exporting)return;
+  try{
+    savePage();
+    if(!hasContent(pages)){localStorage.removeItem(SAVE_KEY);return;}
+    const data={v:1,t:Date.now(),cur:curPage,opt:st.opt,pages:pages.map(p=>({mode:p.mode,o2:p.o2,o3:p.o3,ink:p.ink,sliders:p.sliders,v2:p.v2,v3:p.v3}))};
+    const rep=withImg=>(k,v)=>{if(typeof v==='function'||k==='ui'||k==='_anc')return undefined;if(k==='img')return withImg&&v?v.src:undefined;return v;};
+    try{localStorage.setItem(SAVE_KEY,JSON.stringify(data,rep(true)));}
+    catch(e){localStorage.setItem(SAVE_KEY,JSON.stringify(data,rep(false)));}
+  }catch(e){}
+}
+function scheduleSave(){if(!saveReady)return;clearTimeout(saveT);saveT=setTimeout(saveNow,1200);}
+window.addEventListener('pagehide',saveNow);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveNow();});
+function rehydrate(o,mode){
+  try{
+    const two=(src,R)=>{const i=src.indexOf('=');return [compile(src.slice(0,i),R).f,compile(src.slice(i+1),R).f];};
+    if(mode==='2d'){
+      if(o.type==='func')o.f=compile(o.src,['x','y']).f;
+      else if(o.type==='vline')o.f=compile(o.src.slice(o.src.indexOf('=')+1),['x','y']).f;
+      else if(o.type==='implicit'){const [A,B]=two(o.src,['x','y']);o.F=e=>A(e)-B(e);}
+    } else {
+      if(o.type==='plane'){const [A,B]=two(o.src,['x','y','z']);o.G=e=>A(e)-B(e);}
+      else if(o.type==='surface')o.f=compile(o.src.slice(o.src.indexOf('=')+1),['x','y','z']).f;
+    }
+    return true;
+  }catch(e){return false;}
+}
+function restoreSave(data){
+  pages.length=0;
+  data.pages.forEach(p=>{
+    p.o2=(p.o2||[]).filter(o=>rehydrate(o,'2d'));p.o3=(p.o3||[]).filter(o=>rehydrate(o,'3d'));
+    p.ink=p.ink||{'2d':[],'3d':[]};['2d','3d'].forEach(m=>{p.ink[m]=(p.ink[m]||[]).filter(s=>s.kind!=='image'||typeof s.img==='string');
+      p.ink[m].forEach(s=>{if(s.kind==='image'){const im=new Image();im.onload=render;im.src=s.img;s.img=im;}});});
+    p.hist={'2d':[],'3d':[]};p.sliders=(p.sliders||[]).map(sl=>Object.assign(sl,{playing:false}));
+    pages.push(p);
+  });
+  let mx=0;pages.forEach(p=>[...p.o2,...p.o3].forEach(o=>{if(o.id>mx)mx=o.id;}));uid=mx+1;
+  if(data.opt)Object.assign(st.opt,data.opt);
+  document.querySelectorAll('[data-opt]').forEach(c=>{c.checked=!!st.opt[c.dataset.opt];});
+  document.querySelectorAll('[data-optsel]').forEach(sel=>{sel.value=String(st.opt[sel.dataset.optsel]);});
+  curPage=-1;applyPage(Math.min(data.cur||0,pages.length-1));setMode(st.mode);updatePageBar();
+}
+function initResume(){
+  let data=null;
+  try{const raw=localStorage.getItem(SAVE_KEY);if(raw)data=JSON.parse(raw);}catch(e){}
+  if(!data||!data.pages||!data.pages.length){saveReady=true;return false;}
+  const box=$('#resume'),when=new Date(data.t);
+  $('#resumeImg').src=$('#geoBtn img').src;
+  let ds='';try{ds=when.toLocaleString('bg-BG',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});}catch(e){ds=when.toLocaleString();}
+  const n=data.pages.length;
+  $('#resumeText').textContent='Намерих запазена работа от '+ds+(n>1?' ('+n+' страници)':'')+'. Искаш ли да продължиш от там, откъдето спря?';
+  box.hidden=false;$('#resumeYes').focus();
+  $('#resumeYes').onclick=()=>{box.hidden=true;try{restoreSave(data);say('Продължаваш от запазената работа.','ok');}catch(e){console.error(e);say('Не успях да възстановя запазената работа.','err');}saveReady=true;};
+  $('#resumeNo').onclick=()=>{box.hidden=true;try{localStorage.removeItem(SAVE_KEY);}catch(e){}saveReady=true;};
+  return true;
+}
+const resumed=initResume();
+try{if(!resumed&&!localStorage.getItem('geoSeen')){localStorage.setItem('geoSeen','1');geo.open=true;geo.mode='task';geo.task='welcome';geoRender();}}catch(e){}
 new ResizeObserver(resize).observe($('#stage'));
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',render);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(render);
