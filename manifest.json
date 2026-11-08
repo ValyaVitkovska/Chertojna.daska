@@ -1,0 +1,17 @@
+{
+  "name": "Чертожна дъска",
+  "short_name": "Чертожна дъска",
+  "description": "Графики на функции, фигури в равнината, тела и равнини в пространството",
+  "lang": "bg",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F6F8FB",
+  "theme_color": "#1D5BBF",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
