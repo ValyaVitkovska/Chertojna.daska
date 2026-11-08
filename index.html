@@ -81,8 +81,12 @@ details.help summary{cursor:pointer;color:var(--accent);font-weight:600;font-siz
 .list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .list .sechead{padding-top:6px}
 .item{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:start;padding:8px 2px;border-bottom:1px solid var(--line)}
-.dot{width:16px;height:16px;border-radius:50%;border:2.5px solid var(--c);background:var(--c);cursor:pointer;margin-top:3px;padding:0}
-.item.off .dot{background:transparent}
+.dot{width:26px;height:24px;border:0;background:transparent;color:var(--c);cursor:pointer;margin-top:-1px;padding:0;display:grid;place-items:center;border-radius:6px}
+.dot svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dot:hover{background:var(--field)}
+.item.off .dot{color:var(--ink-soft)}
+.namerow{width:100%;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+.namerow input{flex:1;min-width:0;font:inherit;font-size:14px;padding:4px 7px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink)}
 .item.off .desc,.item.off .ro{opacity:.45}
 .desc{font-size:14.5px;word-break:break-word;font-variant-numeric:tabular-nums}
 .desc strong{font-weight:600}
@@ -961,7 +965,7 @@ function drawAngle(o,T){
     ctx.moveTo(vx,vy);ctx.lineTo(vx+u[0]*q,vy+u[1]*q);ctx.lineTo(vx+(u[0]+w[0])*q,vy+(u[1]+w[1])*q);ctx.lineTo(vx+w[0]*q,vy+w[1]*q);ctx.closePath();
   } else {ctx.moveTo(vx,vy);ctx.arc(vx,vy,r,a1,a1+diff,diff<0);ctx.closePath();}
   ctx.fill();ctx.stroke();
-  if(st.opt.measures){const m=a1+diff/2;text(fmt(deg,1)+'°',vx+Math.cos(m)*(r+16),vy+Math.sin(m)*(r+16),{color:o.color,align:'center',base:'middle',halo:T.paper,font:'600 12px "Golos Text",system-ui,sans-serif'});}
+  if(st.opt.measures||o.named){const m=a1+diff/2;text(o.named?(st.opt.measures?o.name+' = '+fmt(deg,1)+'°':o.name):fmt(deg,1)+'°',vx+Math.cos(m)*(r+16),vy+Math.sin(m)*(r+16),{color:o.color,align:'center',base:'middle',halo:T.paper,font:'600 12px "Golos Text",system-ui,sans-serif'});}
 }
 function polyStats(ids){return polyStatsPts(ids.map(P));}
 function polyStatsPts(pts){
@@ -1045,6 +1049,8 @@ function render2D(T){
       case 'line':case 'perp':case 'par':case 'ftan':case 'ctan':{const L=lineOf(o);if(!L)break;
         if(st.pending.includes(o.id))drawInfLine(L.p,L.d,rgba(T.accent,0.3),8);
         drawInfLine(L.p,L.d,o.color,2);
+        if(o.named){const [cx,cy]=s2w(W*0.62,H*0.4),dd=L.d.x*L.d.x+L.d.y*L.d.y,t=((cx-L.p.x)*L.d.x+(cy-L.p.y)*L.d.y)/dd,qx=L.p.x+L.d.x*t,qy=L.p.y+L.d.y*t;
+          const [sx2,sy2]=w2s(qx,qy),ln=Math.hypot(L.d.x,L.d.y);text(o.name,sx2-L.d.y/ln*14,sy2-L.d.x/ln*14,{color:o.color,align:'center',base:'middle',halo:T.paper,font:labelFont()});}
         if(L.T){const [tx,ty]=w2s(L.T.x,L.T.y);ctx.beginPath();ctx.arc(tx,ty,3.5,0,Math.PI*2);ctx.fillStyle=T.paper;ctx.fill();ctx.strokeStyle=o.color;ctx.lineWidth=1.8;ctx.stroke();}
         break;}
       case 'tangpoly':{const vs=tangPolyVerts(o);if(vs.length<3||vs.some(v=>!isFinite(v.x)))break;
@@ -1054,8 +1060,8 @@ function render2D(T){
         const a=P(o.a),b=P(o.b);const [x1,y1]=w2s(a.x,a.y),[x2,y2]=w2s(b.x,b.y);
         if(st.pending.includes(o.id)){ctx.strokeStyle=rgba(T.accent,0.3);ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
         ctx.strokeStyle=o.color;ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-        if(st.opt.measures){const len=Math.hypot(b.x-a.x,b.y-a.y),dx=x2-x1,dy=y2-y1,l=Math.hypot(dx,dy)||1;
-          text(fmt(len),(x1+x2)/2-dy/l*12,(y1+y2)/2+dx/l*12,{color:o.color,align:'center',base:'middle',halo:T.paper,font:'600 12px "Golos Text",system-ui,sans-serif'});}
+        if(st.opt.measures||o.named){const len=Math.hypot(b.x-a.x,b.y-a.y),dx=x2-x1,dy=y2-y1,l=Math.hypot(dx,dy)||1;
+          text(o.named?(st.opt.measures?o.name+' = '+fmt(len):o.name):fmt(len),(x1+x2)/2-dy/l*12,(y1+y2)/2+dx/l*12,{color:o.color,align:'center',base:'middle',halo:T.paper,font:'600 12px "Golos Text",system-ui,sans-serif'});}
         break;}
       case 'vec':case 'vexpr':{
         const V=vecOf(o);if(!V)break;const [x1,y1]=w2s(V.s.x,V.s.y);
@@ -2446,7 +2452,10 @@ function draw(){
 }
 
 /* ---------- list ---------- */
-function describe(o){
+const PT3N=['point3','pt3c'];
+const NAMEPREFIX=['segment','line','perp','par','ftan','ctan','bisect','implicit','vline','angle','polygon','tangpoly'];
+function describe(o){const t=describe0(o);return o.named&&NAMEPREFIX.includes(o.type)?o.name+': '+t:t;}
+function describe0(o){
   switch(o.type){
     case 'vec':case 'vexpr':{const V=vecOf(o);const n=o.type==='vec'?'\u0001'+nm(o.a)+nm(o.b)+'\u0002':o.src;if(!V)return n;
       const L=Math.hypot(V.v.x,V.v.y);
@@ -2537,8 +2546,9 @@ function renderList(){
 }
 function objItem(o){
   const li=el('li','item'+(o.visible?'':' off'));li.style.setProperty('--c',o.color);
-  const dot=el('button','dot');dot.type='button';dot.setAttribute('aria-label',o.visible?'Скрий':'Покажи');dot.title='Покажи или скрий';
-  dot.onclick=()=>{o.visible=!o.visible;li.classList.toggle('off',!o.visible);dot.setAttribute('aria-label',o.visible?'Скрий':'Покажи');render();};
+  const dot=el('button','dot');dot.type='button';const EYE='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',EYEOFF='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.5 10.5 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.8-1.3"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+  const setEye=()=>{dot.innerHTML=o.visible?EYE:EYEOFF;dot.setAttribute('aria-label',o.visible?'Скрий обекта':'Покажи обекта');dot.title=o.visible?'Скрий':'Покажи';};setEye();
+  dot.onclick=()=>{o.visible=!o.visible;li.classList.toggle('off',!o.visible);setEye();render();};
   const desc=el('div','desc');
   if(o.type==='body'){desc.append(el('strong',null,o.name));}else{desc.dataset.id=o.id;setRich(desc,describe(o));}
   const del=el('button','del','×');del.type='button';del.setAttribute('aria-label','Изтрий');
@@ -2560,6 +2570,22 @@ function objItem(o){
       b.onclick=()=>{o.lw=m;row.querySelectorAll('.lsb').forEach(x=>x.setAttribute('aria-pressed',x===b));render();};row.append(b);});
     const dl=el('label','dsh');const c2=el('input');c2.type='checkbox';c2.checked=!!o.dash;c2.onchange=()=>{o.dash=c2.checked;render();};dl.append(c2,el('span',null,'пунктир'));row.append(dl);
     cpal.append(row);}
+  if(o.type!=='vec'&&o.type!=='vexpr'){
+    const nr=el('label','namerow');nr.append(el('span',null,'Име'));const ni=el('input');ni.type='text';ni.value=o.name&&(o.named||isPt(o)||PT3N.includes(o.type)||['func','circle','circ3','incircle','plane','plane3','line3','body'].includes(o.type))?o.name:'';
+    ni.placeholder=isPt(o)||PT3N.includes(o.type)?'напр. M':'напр. a';ni.maxLength=24;ni.spellcheck=false;
+    ni.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ni.blur();}};
+    ni.onchange=()=>{
+      const v=ni.value.trim().replace(/\s+/g,' ');const isP=isPt(o)||PT3N.includes(o.type);
+      if(!v){if(isP||['func','circle','circ3','incircle','plane','plane3','line3','body'].includes(o.type)){ni.value=o.name;say('Този обект трябва да има име.','err');return;}delete o.named;if(o.type!=='polygon')delete o.name;else o.name=o.pts.map(nm).join('');}
+      else{
+        if(isP){const pool=st.mode==='2d'?st.o2.filter(isPt):st.o3.filter(x=>PT3N.includes(x.type));if(pool.some(x=>x!==o&&x.name===v)){ni.value=o.name;say('Вече има точка с име '+v+'.','err');return;}}
+        if(o.type==='func'&&st.o2.some(x=>x!==o&&x.type==='func'&&x.name===v)){ni.value=o.name;say('Вече има функция '+v+'.','err');return;}
+        o.name=v;o.named=true;
+      }
+      renderList();render();say('Новото име е запазено.','ok');
+    };
+    nr.append(ni);cpal.append(nr);
+  }
   cb.title='Цвят и прозрачност';cb.setAttribute('aria-label','Цвят и прозрачност');
   cb.onclick=()=>{cpal.hidden=!cpal.hidden;};
   li.append(dot,desc,cb,del,cpal);
