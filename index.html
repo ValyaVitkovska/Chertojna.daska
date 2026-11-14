@@ -64,7 +64,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 .keypad .fn{font-size:13.5px}
 .keypad .var{font-family:"Times New Roman",Georgia,serif;font-style:italic;font-size:19px}
 .keypad .num{background:var(--panel);font-weight:600}
-.keypad .go{grid-column:span 4;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:15px;border-color:var(--accent)}
+.keypad .go{grid-column:span 2;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:15px;border-color:var(--accent)}
 .msg{min-height:1.2em;font-size:13.5px;margin-top:-8px}
 .msg.err{color:var(--err)} .msg.ok{color:var(--ok)}
 details.help summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:14px}
@@ -174,6 +174,13 @@ details.help summary{cursor:pointer;color:var(--accent);font-weight:600;font-siz
 }
 .cons{display:flex;flex-direction:column;gap:8px}
 .cons select{width:100%;font:inherit;font-size:14px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink)}
+.imin{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);width:100%}
+.introw{display:grid;grid-template-columns:54px 1fr auto 1fr 54px;gap:6px;align-items:center}
+.introw input{font:inherit;font-size:15px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);width:100%;min-width:0;text-align:center}
+.introw select{padding:7px 4px;text-align:center;font-size:17px;font-weight:600}
+.introw span{font-weight:600}
+.intbtns{display:flex;gap:6px;flex-wrap:wrap}
+.inthint{font-size:12.5px;color:var(--ink-soft);margin:0}
 .consArgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
 .consArgs label{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--ink-soft)}
 .cons .btn{align-self:flex-start}
@@ -251,6 +258,35 @@ details.help summary{cursor:pointer;color:var(--accent);font-weight:600;font-siz
       <div class="examples" id="examples"></div>
     </details>
 
+    <section id="intSec" class="cons">
+      <h2 class="sec">Интервал на числовата ос</h2>
+      <div class="introw">
+        <select id="intL" aria-label="Лява скоба"><option value="[">[</option><option value="(">(</option></select>
+        <input id="intA" type="text" inputmode="decimal" placeholder="−∞" aria-label="Ляв край">
+        <span>;</span>
+        <input id="intB" type="text" inputmode="decimal" placeholder="+∞" aria-label="Десен край">
+        <select id="intR" aria-label="Дясна скоба"><option value=")">)</option><option value="]">]</option></select>
+      </div>
+      <label class="dsh">Вид <select id="intStyle" style="font:inherit;font-size:13.5px;padding:4px 6px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink)"><option value="bridge" selected>с дъги и черти</option><option value="hatch">със защриховка</option><option value="plain">само върху оста</option></select></label>
+      <div class="intbtns"><button class="btn" type="button" id="intGo">Начертай</button><button class="ghost" type="button" id="intUnion">Добави към последния с ∪</button></div>
+      <p class="inthint">Празен край означава безкрайност. Може и с писане в полето горе, напр. x ≥ 1, −2 &lt; x ≤ 3 или (−∞; −1) ∪ [2; 4].</p>
+    </section>
+
+    <section id="imSec" class="cons">
+      <h2 class="sec">Метод на интервалите</h2>
+      <input id="imExpr" class="imin" type="text" spellcheck="false" placeholder="неравенство, напр. (x − 1)(x + 2)/(x − 4) ≥ 0" aria-label="Неравенство или израз">
+      <div class="intbtns"><button class="ghost" type="button" id="imFind">Намери точките</button></div>
+      <input id="imPts" class="imin" type="text" spellcheck="false" placeholder="точки, напр. −2; 1; 4" aria-label="Точки върху оста">
+      <div class="opts">
+        <label><input type="checkbox" id="imWave" checked> Змийка</label>
+        <label><input type="checkbox" id="imSigns" checked> Знаци + и −</label>
+        <label>Без израз: вдясно <select id="imRight" style="font:inherit;font-size:13px;padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)"><option value="+">+</option><option value="-">−</option></select></label>
+        <label>Точките <select id="imDots" style="font:inherit;font-size:13px;padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)"><option value="open">○ празни</option><option value="closed">● плътни</option></select></label>
+      </div>
+      <div class="intbtns"><button class="btn" type="button" id="imGo">Раздели оста</button></div>
+      <p class="inthint">Ако въведеш неравенство, знаците и отговорът се намират сами. Ако въведеш само точки, знаците се редуват.</p>
+    </section>
+
     <section id="bodiesSec" hidden>
       <h2 class="sec">Добави тяло</h2>
       <div class="bodies" id="bodies"></div>
@@ -265,6 +301,7 @@ details.help summary{cursor:pointer;color:var(--accent);font-weight:600;font-siz
 
     <div class="opts" id="opts2d">
       <label><input type="checkbox" data-opt="axes" checked> Оси</label>
+      <label><input type="checkbox" data-opt="numline"> Само числова ос</label>
       <label><input type="checkbox" data-opt="grid" checked> Мрежа</label>
       <label><input type="checkbox" data-opt="squares"> Малки квадратчета (като в тетрадка)</label>
       <label><input type="checkbox" data-opt="snap" checked> Прилепване към мрежата</label>
@@ -471,7 +508,7 @@ const st={
   o2:[],o3:[],sliders:[],
   v2:{cx:0,cy:0,scale:50},
   v3:{yaw:-1.9,pitch:0.42,zoom:1},
-  opt:{keepShape:false,lsize:19,squares:false,axes3:true,coords3:false,sections:true,exportList:false,axes:true,grid:true,snap:true,special:true,measures:true,transp:true,grid3:true,labels:true,proj:false},
+  opt:{numline:false,keepShape:false,lsize:19,squares:false,axes3:true,coords3:false,sections:true,exportList:false,axes:true,grid:true,snap:true,special:true,measures:true,transp:true,grid3:true,labels:true,proj:false},
   L:5,
   pen:{color:'ink',size:1},hl:{color:'#F2C230',size:1},
   ink:{'2d':[],'3d':[]},hist:{'2d':[],'3d':[]}
@@ -723,6 +760,7 @@ function say(t,kind){const m=$('#msg');m.textContent=t;m.className='msg'+(kind?'
 
 function cmd2D(raw){
   const s=fixLetters(raw.trim());if(!s)return;
+  {const parts=parseIntervalCmd(s);if(parts){const sel=document.getElementById('intStyle');const o=addObj2({type:'interval',parts,src:intervalStr(parts),style:sel?sel.value:'bridge'});changed();return 'Начертах x ∈ '+o.src+'.';}}
   {const c=s.replace(/\s+/g,'').replace(/[−–]/g,'-').replace(/^вектор/i,'');
     const re=/([+\-]?)(\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?)?[*·]?([A-Z][0-9]*)([A-Z][0-9]*)/g;let m,acc='',terms=[];
     while((m=re.exec(c))){acc+=m[0];let k=1;if(m[2]){const [p,q]=m[2].replace(/,/g,'.').split('/');k=parseFloat(p)/(q?parseFloat(q):1);}if(m[1]==='-')k=-k;
@@ -884,11 +922,11 @@ function drawGrid2D(T){
   const ax=Math.min(Math.max(ox,0),W),ay=Math.min(Math.max(oy,0),H);
   ctx.strokeStyle=T.axis;ctx.fillStyle=T.axis;ctx.lineWidth=1.4;ctx.beginPath();
   if(oy>=0&&oy<=H){ctx.moveTo(0,oy);ctx.lineTo(W-2,oy);}
-  if(ox>=0&&ox<=W){ctx.moveTo(ox,H);ctx.lineTo(ox,2);}
+  if(!st.opt.numline&&ox>=0&&ox<=W){ctx.moveTo(ox,H);ctx.lineTo(ox,2);}
   ctx.stroke();
   if(oy>=0&&oy<=H){ctx.beginPath();ctx.moveTo(W-2,oy);ctx.lineTo(W-12,oy-5);ctx.lineTo(W-12,oy+5);ctx.fill();
     text('x',W-14,oy-9,{color:T.ink,font:'italic 17px "Times New Roman",Georgia,serif',align:'right',halo:T.paper});}
-  if(ox>=0&&ox<=W){ctx.beginPath();ctx.moveTo(ox,2);ctx.lineTo(ox-5,12);ctx.lineTo(ox+5,12);ctx.fill();
+  if(!st.opt.numline&&ox>=0&&ox<=W){ctx.beginPath();ctx.moveTo(ox,2);ctx.lineTo(ox-5,12);ctx.lineTo(ox+5,12);ctx.fill();
     text('y',ox+10,18,{color:T.ink,font:'italic 17px "Times New Roman",Georgia,serif',halo:T.paper});}
   const lo={color:T.soft,halo:T.paper};
   const ly=Math.min(Math.max(ay+5,4),H-18);
@@ -898,12 +936,13 @@ function drawGrid2D(T){
     text(tickText(v,step),sx,ly,Object.assign({align:'center',base:'top'},lo));
   }
   const lx=Math.min(Math.max(ax-6,30),W-4);
-  for(let v=Math.ceil(y0/step)*step;v<=y1;v+=step){
+  if(!st.opt.numline)for(let v=Math.ceil(y0/step)*step;v<=y1;v+=step){
     if(Math.abs(v)<step/2)continue;const sy=w2s(0,v)[1];if(sy<22)continue;
     ctx.strokeStyle=T.axis;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ax-3,sy);ctx.lineTo(ax+3,sy);ctx.stroke();
     text(tickText(v,step),lx,sy,Object.assign({align:'right',base:'middle'},lo));
   }
-  if(ox>=0&&ox<=W&&oy>=0&&oy<=H) text('O',ox-6,oy+5,{color:T.soft,align:'right',base:'top',halo:T.paper,font:'italic 14px "Times New Roman",Georgia,serif'});
+  if(st.opt.numline){if(ox>=0&&ox<=W&&oy>=0&&oy<=H){ctx.strokeStyle=T.axis;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ox,oy-4);ctx.lineTo(ox,oy+4);ctx.stroke();text('0',ox,ly,{align:'center',base:'top',color:T.soft,halo:T.paper});}}
+  else if(ox>=0&&ox<=W&&oy>=0&&oy<=H) text('O',ox-6,oy+5,{color:T.soft,align:'right',base:'top',halo:T.paper,font:'italic 14px "Times New Roman",Georgia,serif'});
 }
 function evalF(f,x){ENV.x=x;try{return f(ENV);}catch(e){return NaN;}}
 function drawFunc(o){
@@ -1025,10 +1064,10 @@ function styleStroke(o){
 }
 function unstyleStroke(){if(_origStroke)delete ctx.stroke;}
 function render2D(T){
-  st.labels2=[];
+  st.labels2=[];st.intHits=[];st.ptHits=[];
   drawGrid2D(T);
   drawImages(T);
-  const order={polygon:0,tangpoly:0,circle:1,circ3:1,incircle:1,implicit:2,func:2,vline:2,line:3,perp:3,par:3,ftan:3,ctan:3,bisect:3,segment:4,vec:4,vexpr:4,angle:5,mid:7,bisL:7,ipt:7,point:7,cpoint:7,fpoint:7,center:7,tpv:7};
+  const order={polygon:0,tangpoly:0,circle:1,circ3:1,incircle:1,implicit:2,func:2,vline:2,line:3,perp:3,par:3,ftan:3,ctan:3,bisect:3,segment:4,interval:1,imethod:1,vec:4,vexpr:4,angle:5,mid:7,bisL:7,ipt:7,point:7,cpoint:7,fpoint:7,center:7,tpv:7};
   const vis=st.o2.filter(o=>o.visible).sort((a,b)=>order[a.type]-order[b.type]);
   for(const o of vis){ctx.globalAlpha=o.alpha==null?1:o.alpha;styleStroke(o);
     switch(o.type){
@@ -1076,6 +1115,8 @@ function render2D(T){
         const dx=x2-x1,dy=y2-y1,l=Math.hypot(dx,dy)||1;
         vecLabel(o.type==='vec'?'\u0001'+nm(o.a)+nm(o.b)+'\u0002':o.src,(x1+x2)/2-dy/l*16,(y1+y2)/2+dx/l*16,o.color,T);
         break;}
+      case 'imethod':drawIMethod(o,T);break;
+      case 'interval':drawInterval(o,T,st.o2.filter(q=>q.type==='interval'&&q.visible).indexOf(o));break;
       case 'angle':drawAngle(o,T);break;
       case 'bisect':{const V=P(o.v),Lf=bisFoot(o);if(!Lf||!isFinite(V.x))break;const [vx,vy]=w2s(V.x,V.y),[lx,ly]=w2s(Lf.x,Lf.y);
         if(st.pending.includes(o.id)){ctx.strokeStyle=rgba(T.accent,0.3);ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(vx,vy);ctx.lineTo(lx,ly);ctx.stroke();}
@@ -1097,7 +1138,7 @@ function render2D(T){
   for(const o of vis){ctx.globalAlpha=o.alpha==null?1:o.alpha;
     if(!isPt(o)){continue;}const p=P(o.id);if(!isFinite(p.x))continue;const [x,y]=w2s(p.x,p.y);
     if(st.pending.includes(o.id)){ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.strokeStyle=T.accent;ctx.lineWidth=2;ctx.stroke();}
-    ctx.beginPath();ctx.arc(x,y,DRAG_TYPES.includes(o.type)?5:4.5,0,Math.PI*2);ctx.fillStyle=o.color;ctx.fill();ctx.strokeStyle=T.paper;ctx.lineWidth=1.5;ctx.stroke();
+    ctx.beginPath();ctx.arc(x,y,DRAG_TYPES.includes(o.type)?5:4.5,0,Math.PI*2);if(o.hollow){ctx.fillStyle=T.paper;ctx.fill();ctx.strokeStyle=o.color;ctx.lineWidth=2.2;ctx.stroke();}else{ctx.fillStyle=o.color;ctx.fill();ctx.strokeStyle=T.paper;ctx.lineWidth=1.5;ctx.stroke();}
     {const k=st.opt.lsize/15,off=o.lo||{dx:8*k,dy:-8*k},lf=labelFont();text(o.name,x+off.dx,y+off.dy,{color:T.ink,font:lf,halo:T.paper});ctx.font=lf;
       const lw=ctx.measureText(o.name).width;st.labels2.push({id:o.id,x0:x+off.dx-3,x1:x+off.dx+lw+3,y0:y+off.dy-st.opt.lsize*0.85,y1:y+off.dy+st.opt.lsize*0.25,px:x,py:y});}
   }
@@ -1268,6 +1309,193 @@ function makeInter(a,b,sx,sy){
   }
   changed();if(made.length)say('Построих '+made.map(o=>o.name).join(' и ')+'.','ok');
 }
+/* ---------- intervals ---------- */
+const fmtEnd=(v,l)=>v===Infinity?'+∞':v===-Infinity?'−∞':(l||fmt(v));
+const endLab=t=>{const p=prettify(String(t).trim());return /[√πe\/]/.test(p)?p:null;};
+function intervalStr(parts){return parts.map(p=>p.a===p.b?'{'+fmt(p.a)+'}':(p.ca?'[':'(')+fmtEnd(p.a,p.la)+'; '+fmtEnd(p.b,p.lb)+(p.cb?']':')')).join(' ∪ ');}
+function ineqStr(p){
+  if(p.a===p.b)return 'x = '+fmt(p.a);
+  if(!isFinite(p.a)&&!isFinite(p.b))return 'x е всяко реално число';
+  const A=p.la||fmt(p.a),B=p.lb||fmt(p.b);
+  if(!isFinite(p.a))return 'x '+(p.cb?'≤':'<')+' '+B;
+  if(!isFinite(p.b))return 'x '+(p.ca?'≥':'>')+' '+A;
+  return A+' '+(p.ca?'≤':'<')+' x '+(p.cb?'≤':'<')+' '+B;
+}
+function parseIntervalCmd(raw){
+  let s=raw.replace(/[−–]/g,'-').replace(/\s+/g,' ').trim();
+  const hadIn=/∈/.test(s);s=s.replace(/^x\s*∈\s*/,'');
+  const isIneq=!/[\[\]]/.test(s)&&/[<>≤≥]/.test(s)&&/x/.test(s)&&!/y/.test(s);
+  const isInt=hadIn||/[∞\[\]∪]/.test(s)||/\bU\b/.test(s);
+  if(!isIneq&&!isInt)return null;
+  const val=t=>{t=t.trim().replace(/\s+/g,'');if(/^\+?(∞|inf)$/i.test(t))return Infinity;if(/^-(∞|inf)$/i.test(t))return -Infinity;
+    const P=compile(t,[]);if(P.vars.size)throw userErr('Краищата на интервала трябва да са числа.');const v=P.f(ENV);if(!isFinite(v))throw userErr('Неразпознат край на интервал: '+t);return v;};
+  let parts=[];
+  if(isIneq){
+    const toks=s.replace(/<=/g,'≤').replace(/>=/g,'≥').split(/(≤|≥|<|>)/).map(t=>t.trim()).filter(t=>t!=='');
+    const up=o=>o==='<'||o==='≤';
+    if(toks.length===3){
+      const [l,op,r]=toks;
+      if(l==='x'){const v=val(r),L=endLab(r);parts=[up(op)?{a:-Infinity,b:v,ca:false,cb:op==='≤',lb:L}:{a:v,b:Infinity,ca:op==='≥',cb:false,la:L}];}
+      else if(r==='x'){const v=val(l),L=endLab(l);parts=[up(op)?{a:v,b:Infinity,ca:op==='≤',cb:false,la:L}:{a:-Infinity,b:v,ca:false,cb:op==='≥',lb:L}];}
+      else throw userErr('Неравенството трябва да е за x, напр. x ≥ 2.');
+    } else if(toks.length===5&&toks[2]==='x'){
+      const [l,o1,,o2,r]=toks,a=val(l),b=val(r);
+      if(up(o1)&&up(o2))parts=[{a,b,ca:o1==='≤',cb:o2==='≤',la:endLab(l),lb:endLab(r)}];
+      else if(!up(o1)&&!up(o2))parts=[{a:b,b:a,ca:o2==='≥',cb:o1==='≥',la:endLab(r),lb:endLab(l)}];
+      else throw userErr('Двойното неравенство трябва да е в една посока, напр. −2 < x ≤ 3.');
+    } else throw userErr('Не разпознах неравенството. Пример: x ≥ 2 или −2 < x ≤ 3.');
+  } else {
+    for(const seg of s.split(/∪|\bU\b/)){
+      const m=seg.trim().match(/^([\[(])(.*)([\])])$/);
+      if(!m)throw userErr('Интервалът се пише със скоби, напр. [−2; 3) или (−∞; 4].');
+      const inner=m[2],sp=inner.includes(';')?inner.split(';'):splitTop(inner,',');
+      if(sp.length!==2)throw userErr('Между краищата на интервала сложи точка и запетая, напр. [1; 5].');
+      const a=val(sp[0]),b=val(sp[1]);let ca=m[1]==='[',cb=m[3]===']';if(!isFinite(a))ca=false;if(!isFinite(b))cb=false;
+      parts.push({a,b,ca,cb,la:isFinite(a)?endLab(sp[0]):null,lb:isFinite(b)?endLab(sp[1]):null});
+    }
+  }
+  for(const p of parts)if(p.a>p.b||(p.a===p.b&&!(p.ca&&p.cb)))throw userErr('Левият край трябва да е по-малък от десния.');
+  return parts;
+}
+function drawInterval(o,T,k){
+  const style=o.style||(o.nohatch?'plain':'hatch');
+  const oy=w2s(0,0)[1],ay=Math.min(Math.max(oy,64+k*14),H-30),col=o.color;
+  const h=style==='bridge'?26+k*14:style==='hatch'?16+k*12:6,top=ay-h,dxh=h*0.75,dir=k%2?-1:1;
+  const lf='600 13px "Golos Text",system-ui,sans-serif';
+  if(!st.intHits)st.intHits=[];
+  for(const p of o.parts){
+    const x1=isFinite(p.a)?w2s(p.a,0)[0]:-30,x2=isFinite(p.b)?w2s(p.b,0)[0]:W+30;
+    if(x2<-30||x1>W+30)continue;
+    st.intHits.push({id:o.id,x1:Math.max(x1,0)-6,x2:Math.min(x2,W)+6,y0:top-18,y1:ay+8});
+    {const pi=o.parts.indexOf(p);if(!st.ptHits)st.ptHits=[];if(isFinite(p.a)&&p.a!==p.b)st.ptHits.push({kind:'int',o,pi,end:'a',x:x1,y:ay});if(isFinite(p.b)&&p.a!==p.b)st.ptHits.push({kind:'int',o,pi,end:'b',x:x2,y:ay});}
+    if(p.a===p.b){ctx.beginPath();ctx.arc(x1,ay,5.5,0,2*Math.PI);ctx.fillStyle=col;ctx.fill();
+      text(p.la||fmt(p.a),x1,ay-18,{color:col,align:'center',base:'middle',halo:T.paper,font:lf});continue;}
+    if(style==='bridge'){
+      const r=Math.min(24,Math.max(6,(x2-x1)/4));
+      ctx.strokeStyle=col;ctx.lineWidth=2.6;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
+      if(isFinite(p.a)){if(p.ca){ctx.moveTo(x1,ay);ctx.lineTo(x1,top);}else{ctx.moveTo(x1,ay);ctx.quadraticCurveTo(x1,top,x1+r,top);}}else ctx.moveTo(x1,top);
+      if(isFinite(p.b)){if(p.cb){ctx.lineTo(x2,top);ctx.lineTo(x2,ay);}else{ctx.lineTo(x2-r,top);ctx.quadraticCurveTo(x2,top,x2,ay);}}else ctx.lineTo(x2,top);
+      ctx.stroke();
+      for(const [x,v,lab] of [[x1,p.a,p.la],[x2,p.b,p.lb]])if(isFinite(v))text(lab||fmt(v),x,top-11,{color:col,align:'center',base:'middle',halo:T.paper,font:lf});
+      continue;
+    }
+    ctx.strokeStyle=rgba(col,0.5);ctx.lineWidth=5;ctx.lineCap='butt';ctx.beginPath();ctx.moveTo(x1,ay);ctx.lineTo(x2,ay);ctx.stroke();
+    if(style==='hatch'){ctx.save();ctx.beginPath();ctx.rect(x1,top,x2-x1,h);ctx.clip();
+      ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.beginPath();for(let x=x1-dxh-12;x<x2+dxh+12;x+=8){ctx.moveTo(x,ay);ctx.lineTo(x+dir*dxh,top);}ctx.stroke();ctx.restore();}
+    for(const [x,v,c,lab] of [[x1,p.a,p.ca,p.la],[x2,p.b,p.cb,p.lb]]){
+      if(!isFinite(v))continue;
+      if(style==='hatch'){ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,ay);ctx.lineTo(x,top);ctx.stroke();}
+      ctx.beginPath();ctx.arc(x,ay,5.5,0,2*Math.PI);ctx.fillStyle=c?col:T.paper;ctx.fill();ctx.lineWidth=2.2;ctx.strokeStyle=col;ctx.stroke();
+      text(lab||fmt(v),x,top-10,{color:col,align:'center',base:'middle',halo:T.paper,font:lf});
+    }
+  }
+}
+/* ---------- method of intervals ---------- */
+function niceNum(v){
+  if(Math.abs(v-Math.round(v))<1e-7)return fmt(Math.round(v));
+  for(let q=2;q<=12;q++){const p=v*q;if(Math.abs(p-Math.round(p))<1e-7){const n=Math.round(p);return (n<0?'−':'')+Math.abs(n)+'/'+q;}}
+  return fmt(v);
+}
+function imParseIneq(raw){
+  let s=fixLetters(raw).replace(/[−–]/g,'-').replace(/>=/g,'≥').replace(/<=/g,'≤');
+  const m=s.match(/^(.*?)(≥|≤|>|<)(.*)$/);let rel=null,L=s,R='0';
+  if(m){L=m[1];rel=m[2];R=m[3];if(/[≥≤<>]/.test(R))throw userErr('Използвай само един знак за неравенство.');}
+  if(!L.trim()||!R.trim())throw userErr('Неравенството е непълно.');
+  const A=compile(L,['x']),B=compile(R,['x']);
+  for(const v of [...A.vars,...B.vars])if(v!=='x')throw userErr('Изразът може да съдържа само x.');
+  const fa=A.f,fb=B.f;
+  return {f:x=>{ENV.x=x;return fa(ENV)-fb(ENV);},rel,src:prettify(s.replace(/[≥≤<>].*$/,'')).trim()+(rel?' '+rel+' '+prettify(R).trim():'')};
+}
+function imFindPoints(f){
+  const out=[],add=x=>{if(!out.some(y=>Math.abs(y-x)<1e-6))out.push(x);};
+  const a=-60,b=60,N=24000,h=(b-a)/N;let px=a,pv=f(px);
+  const ppv=[];
+  for(let i=1;i<=N;i++){
+    const x=a+i*h,v=f(x);
+    if(isFinite(v)&&v===0)add(x);
+    if(!isFinite(v)){if(isFinite(pv)){let lo=px,hi=x;for(let k=0;k<50;k++){const m=(lo+hi)/2;if(isFinite(f(m)))lo=m;else hi=m;}add((lo+hi)/2);}}
+    else if(isFinite(pv)&&pv*v<0){let lo=px,hi=x,fl=pv;for(let k=0;k<60;k++){const m=(lo+hi)/2,fm=f(m);if(!isFinite(fm))break;if(fl*fm<=0)hi=m;else{lo=m;fl=fm;}}add((lo+hi)/2);}
+    ppv.push(v);px=x;pv=v;
+  }
+  for(let i=1;i<ppv.length-1;i++){
+    const v=Math.abs(ppv[i]);if(!isFinite(v))continue;
+    if(v<=Math.abs(ppv[i-1])&&v<=Math.abs(ppv[i+1])&&ppv[i-1]*ppv[i+1]>0&&v<1e-2){
+      let lo=a+i*h-h,hi=a+i*h+h;for(let k=0;k<80;k++){const m1=lo+(hi-lo)/3,m2=hi-(hi-lo)/3;if(Math.abs(f(m1))<Math.abs(f(m2)))hi=m2;else lo=m1;}
+      const x=(lo+hi)/2;if(Math.abs(f(x))<1e-9)add(x);}
+  }
+  return out.map(x=>{const r=Math.round(x);if(Math.abs(x-r)<1e-6)return r;for(let q=2;q<=12;q++){const p=Math.round(x*q);if(Math.abs(x*q-p)<1e-5)return p/q;}return x;}).sort((p,q)=>p-q)
+    .filter((x,i,arr)=>i===0||Math.abs(x-arr[i-1])>1e-6);
+}
+function imBuild(exprRaw,ptsRaw,opts){
+  let pts=[],F=null;
+  if(exprRaw.trim())F=imParseIneq(exprRaw);
+  if(ptsRaw.trim()){
+    const parts=ptsRaw.includes(';')?ptsRaw.split(';'):splitTop(ptsRaw,',');
+    for(const t of parts){if(!t.trim())continue;const P=compile(fixLetters(t),[]);if(P.vars.size)throw userErr('Точките трябва да са числа.');const v=P.f(ENV);if(!isFinite(v))throw userErr('Не разпознах точката '+t.trim()+'.');pts.push({v,lab:endLab(t)});}
+  } else if(F){pts=imFindPoints(F.f).map(v=>({v,lab:null}));}
+  if(!pts.length&&!F)throw userErr('Въведи точките или неравенството.');
+  pts.sort((p,q)=>p.v-q.v);pts=pts.filter((p,i)=>i===0||Math.abs(p.v-pts[i-1].v)>1e-9);
+  const n=pts.length,signs=[];
+  for(let i=0;i<=n;i++){
+    if(F){const x=n===0?0:i===0?pts[0].v-1:i===n?pts[n-1].v+1:(pts[i-1].v+pts[i].v)/2;const y=F.f(x);signs.push(!isFinite(y)||y===0?'':(y>0?'+':'−'));}
+    else signs.push(((n-i)%2===0)===(opts.right==='+')?'+':'−');
+  }
+  pts.forEach(p=>{if(F){const y=F.f(p.v);p.pole=!isFinite(y);p.closed=!p.pole&&(F.rel==='≥'||F.rel==='≤');}else p.closed=opts.dots==='closed';});
+  let sol=null;
+  if(F&&F.rel){
+    const want=(F.rel==='>'||F.rel==='≥')?'+':'−',strict=F.rel==='>'||F.rel==='<';sol=[];
+    for(let i=0;i<=n;i++){if(signs[i]!==want)continue;
+      const a=i===0?-Infinity:pts[i-1].v,b=i===n?Infinity:pts[i].v,ca=i>0&&!strict&&!pts[i-1].pole,cb=i<n&&!strict&&!pts[i].pole;
+      const last=sol[sol.length-1];
+      if(last&&last.b===a&&last.cb&&ca){last.b=b;last.cb=cb;last.lb=i<n?pts[i].lab:null;}
+      else sol.push({a,b,ca,cb,la:i>0?pts[i-1].lab:null,lb:i<n?pts[i].lab:null});}
+    if(!strict)pts.forEach(p=>{if(p.pole)return;if(!sol.some(q=>(p.v>q.a&&p.v<q.b)||(p.v===q.a&&q.ca)||(p.v===q.b&&q.cb)))sol.push({a:p.v,b:p.v,ca:true,cb:true,la:p.lab,lb:p.lab});});
+    sol.sort((p,q)=>p.a-q.a);
+  }
+  return {pts:pts.map(p=>({v:p.v,lab:p.lab||(Math.abs(p.v-Math.round(p.v))<1e-9?null:niceNum(p.v)),closed:p.closed,pole:!!p.pole})),signs,sol,src:F?F.src:'',rel:F?F.rel:null,wave:opts.wave,showSigns:opts.signs};
+}
+function drawIMethod(o,T){
+  const oy=w2s(0,0)[1],ay=Math.min(Math.max(oy,80),H-40),col=o.color,amp=22,lf='600 13px "Golos Text",system-ui,sans-serif';
+  const xs=o.pts.map(p=>w2s(p.v,0)[0]),n=xs.length;
+  if(!st.intHits)st.intHits=[];st.intHits.push({id:o.id,x1:0,x2:W,y0:ay-amp-34,y1:ay+amp+6});
+  if(o.sol)for(const p of o.sol){if(p.a===p.b)continue;const x1=isFinite(p.a)?w2s(p.a,0)[0]:-10,x2=isFinite(p.b)?w2s(p.b,0)[0]:W+10;
+    ctx.strokeStyle=rgba(col,0.45);ctx.lineWidth=7;ctx.lineCap='butt';ctx.beginPath();ctx.moveTo(x1,ay);ctx.lineTo(x2,ay);ctx.stroke();}
+  const sgn=i=>o.signs[i]==='+'?1:o.signs[i]==='−'?-1:0;
+  if(o.wave){
+    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.lineCap='round';ctx.beginPath();
+    if(n===0){const s=sgn(0);ctx.moveTo(0,ay-s*amp);ctx.lineTo(W,ay-s*amp);}
+    else{
+      const s0=sgn(0);ctx.moveTo(Math.max(-10,xs[0]-140),ay-s0*amp);ctx.quadraticCurveTo(xs[0]-30,ay-s0*amp,xs[0],ay);
+      for(let i=1;i<n;i++){const s=sgn(i);ctx.moveTo(xs[i-1],ay);ctx.quadraticCurveTo((xs[i-1]+xs[i])/2,ay-s*amp*2,xs[i],ay);}
+      const sn=sgn(n);ctx.moveTo(xs[n-1],ay);ctx.quadraticCurveTo(xs[n-1]+30,ay-sn*amp,Math.min(W+10,xs[n-1]+140),ay-sn*amp);
+    }
+    ctx.stroke();
+  }
+  if(o.showSigns!==false){
+    for(let i=0;i<=n;i++){
+      if(!o.signs[i])continue;
+      const x=n===0?W/2:i===0?xs[0]-60:i===n?xs[n-1]+60:(xs[i-1]+xs[i])/2;
+      text(o.signs[i],x,ay-amp-16,{color:col,align:'center',base:'middle',halo:T.paper,font:'700 24px "Golos Text",system-ui,sans-serif'});
+    }
+  }
+  o.pts.forEach((p,i)=>{const x=xs[i];
+    if(!st.ptHits)st.ptHits=[];st.ptHits.push({kind:'im',o,i,x,y:ay});
+    ctx.beginPath();ctx.arc(x,ay,5.5,0,2*Math.PI);ctx.fillStyle=p.closed?col:T.paper;ctx.fill();ctx.lineWidth=2.2;ctx.strokeStyle=col;ctx.stroke();
+    text(p.lab||fmt(p.v),x,ay+24,{color:col,align:'center',base:'middle',halo:T.paper,font:lf});});
+}
+function toggleDot(sx,sy){
+  const R=st.lastPtrType==='touch'?16:10;
+  const h=(st.ptHits||[]).filter(p=>Math.hypot(p.x-sx,p.y-sy)<R).sort((a,b)=>Math.hypot(a.x-sx,a.y-sy)-Math.hypot(b.x-sx,b.y-sy))[0];
+  if(h){
+    if(h.kind==='int'){const p=h.o.parts[h.pi];if(!p)return false;if(h.end==='a')p.ca=!p.ca;else p.cb=!p.cb;h.o.src=intervalStr(h.o.parts);}
+    else{const p=h.o.pts[h.i];if(!p)return false;if(p.pole){say('В тази точка изразът не съществува, затова тя остава празна.','err');return true;}
+      p.closed=!p.closed;if(h.o.sol)h.o.sol.forEach(q=>{if(q.a===p.v&&q.b!==p.v)q.ca=p.closed;if(q.b===p.v&&q.a!==p.v)q.cb=p.closed;});}
+    changed();return true;
+  }
+  const id=hitPoint(sx,sy,false);
+  if(id){const o=byId(id);o.hollow=!o.hollow;render();return true;}
+  return false;
+}
 function hitCircle(sx,sy){
   const R=st.lastPtrType==='touch'?16:9;let best=null,bd=R;
   for(const o of st.o2){if(!o.visible||!isCircle(o))continue;const C=circleOf(o);if(!C)continue;const [x,y]=w2s(C.x,C.y);
@@ -1283,7 +1511,7 @@ function snapX(x){if(!st.opt.snap)return x;const s=gridInfo().p10/10;return Math
 
 /* ---------- tools ---------- */
 const TOOLS=[
-  {id:'move',name:'Премести',hint:'Влачи точка, за да я преместиш, или празно място, за да преместиш чертежа.',icon:'<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>'},
+  {id:'move',name:'Премести',hint:'Влачи точка, за да я преместиш, или празно място, за да преместиш чертежа. Докосни точка, за да стане празна или плътна.',icon:'<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>'},
   {id:'point',name:'Точка',n:1,hint:'Докосни, за да поставиш точка.',icon:'<circle cx="12" cy="12" r="3.6" fill="currentColor"/>'},
   {id:'inter',name:'Пресечна точка',hint:'Докосни мястото, където се пресичат два обекта, или избери първо единия, после другия.',icon:'<path d="M4 18L20 6M4 6l16 12"/><circle cx="12" cy="12" r="2.8" fill="currentColor"/>'},
   {id:'segment',name:'Отсечка',n:2,hint:'Избери двата края на отсечката.',icon:'<path d="M5 18L19 6"/><circle cx="5" cy="18" r="2" fill="currentColor"/><circle cx="19" cy="6" r="2" fill="currentColor"/>'},
@@ -2149,7 +2377,8 @@ function inkHit(s,sx,sy){
   for(let i=0;i+1<pts.length;i++)if(distSeg(sx,sy,pts[i],pts[i+1])<R)return true;
   return false;
 }
-function eraseAt(sx,sy){const arr=st.ink[st.mode];const keep=arr.filter(s=>!inkHit(s,sx,sy));if(keep.length!==arr.length){st.ink[st.mode]=keep;if(drag)drag.erased=true;render();}}
+function eraseAt(sx,sy){
+  if(st.mode==='2d'){const hit=(st.intHits||[]).find(r=>sx>=r.x1&&sx<=r.x2&&sy>=r.y0&&sy<=r.y1);if(hit){deleteObj2(hit.id);st.intHits=[];changed();if(drag)drag.erased=true;}}const arr=st.ink[st.mode];const keep=arr.filter(s=>!inkHit(s,sx,sy));if(keep.length!==arr.length){st.ink[st.mode]=keep;if(drag)drag.erased=true;render();}}
 function drawInk(T){
   for(const s of st.ink[st.mode]){
     if(s.kind==='image')continue;
@@ -2457,6 +2686,8 @@ const NAMEPREFIX=['segment','line','perp','par','ftan','ctan','bisect','implicit
 function describe(o){const t=describe0(o);return o.named&&NAMEPREFIX.includes(o.type)?o.name+': '+t:t;}
 function describe0(o){
   switch(o.type){
+    case 'imethod':{const P=o.pts.map(p=>p.lab||fmt(p.v)).join('; ');return 'Метод на интервалите'+(o.src?': '+o.src:'')+(P?' | точки '+P:'')+' | знаци '+o.signs.filter(Boolean).join(' ')+(o.sol?' | x ∈ '+(o.sol.length?intervalStr(o.sol):'∅'):'');}
+    case 'interval':return 'x ∈ '+intervalStr(o.parts)+(o.parts.length===1?'  ⇔  '+ineqStr(o.parts[0]):'');
     case 'vec':case 'vexpr':{const V=vecOf(o);const n=o.type==='vec'?'\u0001'+nm(o.a)+nm(o.b)+'\u0002':o.src;if(!V)return n;
       const L=Math.hypot(V.v.x,V.v.y);
       return (o.type==='vec'?'вектор ':'')+n+(o.type==='vexpr'?' (от '+nm(o.start)+')':'')+': ('+fmt(V.v.x)+'; '+fmt(V.v.y)+'), |'+n+'| = '+fmt(L);}
@@ -2586,6 +2817,8 @@ function objItem(o){
     };
     nr.append(ni);cpal.append(nr);
   }
+  if(o.type==='interval'){const hl=el('label','oprow');hl.append(el('span',null,'Вид'));const hs=el('select');hs.style.cssText='font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink)';
+    [['bridge','с дъги и черти'],['hatch','със защриховка'],['plain','само върху оста']].forEach(([v,t])=>{const op=el('option',null,t);op.value=v;hs.append(op);});hs.value=o.style||(o.nohatch?'plain':'hatch');hs.onchange=()=>{o.style=hs.value;render();};hl.append(hs);cpal.append(hl);}
   cb.title='Цвят и прозрачност';cb.setAttribute('aria-label','Цвят и прозрачност');
   cb.onclick=()=>{cpal.hidden=!cpal.hidden;};
   li.append(dot,desc,cb,del,cpal);
@@ -2652,17 +2885,17 @@ function changed(){renderList();render();}
 
 /* ---------- mode & UI ---------- */
 const EX={
-  '2d':['y = 2x − 3','y = x² − 4x + 3','y = a·x + b','y = |x − 2| − 1','y = sin(x)','y = √x','x² + y² = 16','x²/9 + y²/4 = 1','x = 3','A(2; 3)'],
+  '2d':['y = 2x − 3','y = x² − 4x + 3','y = a·x + b','y = |x − 2| − 1','y = sin(x)','y = √x','x² + y² = 16','x²/9 + y²/4 = 1','x = 3','A(2; 3)','x ∈ [−2; 3)','x ≥ 1','(−∞; −1) ∪ [2; 4]'],
   '3d':['A(4; 0; 0)','B(0; 4; 0)','C(0; 0; 4)','ABC','x + y + z = 4','z = 2','2x − y + z = 3','z = (x² + y²)/4','z = sin(x)·cos(y)','z = a·x','A(2; 3; 4)']
 };
 const HELP={
-  '2d':'Функции: sin, cos, tg, cotg, √ (или sqrt), |x| (или abs), ln, lg, ^ за степен, π. Всяка друга буква освен x и y става параметър с плъзгач. Можеш да пишеш десетична запетая: 2,5x. Точка: A(2; 3). Уравнение с x и y, напр. x² + y² = 16, се чертае като крива. Вектори: инструментът „Вектор“ или пиши AB, AB + BC, 2AB − CD, 1/2AB (точките трябва да съществуват).',
+  '2d':'Функции: sin, cos, tg, cotg, √ (или sqrt), |x| (или abs), ln, lg, ^ за степен, π. Всяка друга буква освен x и y става параметър с плъзгач. Можеш да пишеш десетична запетая: 2,5x. Точка: A(2; 3). Уравнение с x и y, напр. x² + y² = 16, се чертае като крива. Интервали: x ∈ [−2; 3), (−∞; 4], [1; +∞), обединения с ∪ или неравенства като x ≥ 1 и −2 < x ≤ 3. Вектори: инструментът „Вектор“ или пиши AB, AB + BC, 2AB − CD, 1/2AB (точките трябва да съществуват).',
   '3d':'Равнина: ax + by + cz = d, напр. x + y + z = 4. Повърхнина: z = f(x, y). Точка: A(1; 2; 3). Буква, различна от x, y и z, става параметър с плъзгач. Телата добавяш с бутоните отдолу. Права и равнина през точки: напиши AB или ABC (става и с върхове на тяло, напр. A, C, B1). Другите построения са в „Построения“: среда, точка в отношение, отсечка, перпендикуляр, успоредни, пресечници. Уравненията и координатите са скрити, докато не включиш „Координати и уравнения“.'
 };
 function setMode(m){
   st.mode=m;st.pending=[];st.hover=null;
   $('#tab2d').setAttribute('aria-selected',m==='2d');$('#tab3d').setAttribute('aria-selected',m==='3d');
-  if(m==='3d'&&!isBoard(st.tool)&&!TOOL3[st.tool])st.tool='move';if(m==='2d'&&!isBoard(st.tool)&&!TOOL[st.tool])st.tool='move';buildToolbar();document.querySelectorAll('.bt[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===st.tool));$('#bodiesSec').hidden=m!=='3d';$('#consSec').hidden=m!=='3d';$('#opts2d').hidden=m!=='2d';$('#opts3d').hidden=m!=='3d';
+  if(m==='3d'&&!isBoard(st.tool)&&!TOOL3[st.tool])st.tool='move';if(m==='2d'&&!isBoard(st.tool)&&!TOOL[st.tool])st.tool='move';buildToolbar();document.querySelectorAll('.bt[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===st.tool));$('#bodiesSec').hidden=m!=='3d';$('#intSec').hidden=m!=='2d';$('#imSec').hidden=m!=='2d';$('#consSec').hidden=m!=='3d';$('#opts2d').hidden=m!=='2d';$('#opts3d').hidden=m!=='3d';
   $('#cmd').placeholder=m==='2d'?'напр. y = 2x + 1':'напр. x + y + z = 4';
   $('#helpText').textContent=HELP[m];
   const ex=$('#examples');ex.textContent='';
@@ -2682,6 +2915,28 @@ document.querySelectorAll('.modes button').forEach(b=>b.onclick=()=>setMode(b.da
 document.querySelectorAll('[data-opt]').forEach(c=>c.onchange=()=>{st.opt[c.dataset.opt]=c.checked;render();});
 Object.entries(BODY_DEFS).forEach(([k,d])=>{const b=el('button');b.type='button';b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+BODY_ICONS[k]+'</svg>';b.append(el('span',null,d.name));b.onclick=()=>addBody(k);$('#bodies').append(b);});
 $('#pdfBtn').onclick=()=>exportPdf();
+$('#imFind').onclick=()=>{
+  try{const F=imParseIneq($('#imExpr').value);if(!$('#imExpr').value.trim())throw userErr('Първо въведи неравенството.');
+    const xs=imFindPoints(F.f);$('#imPts').value=xs.map(niceNum).join('; ');say(xs.length?'Намерих '+xs.length+' точки. Може да ги поправиш, ако трябва.':'Не намерих точки, в които изразът е 0 или не съществува.',xs.length?'ok':'err');}
+  catch(e){say(e.user?e.message:'Не разбрах неравенството.','err');}
+};
+$('#imGo').onclick=()=>{
+  try{const r=imBuild($('#imExpr').value,$('#imPts').value,{wave:$('#imWave').checked,signs:$('#imSigns').checked,right:$('#imRight').value,dots:$('#imDots').value});
+    if(!$('#imPts').value.trim())$('#imPts').value=r.pts.map(p=>p.lab||fmt(p.v)).join('; ');
+    const o=addObj2(Object.assign({type:'imethod'},r));changed();say(o.sol?'Решение: x ∈ '+(o.sol.length?intervalStr(o.sol):'∅')+'.':'Оста е разделена на '+(o.pts.length+1)+' интервала.','ok');}
+  catch(e){console.error(e);say(e.user?e.message:'Не успях да разделя оста.','err');}
+};
+{
+  const build=()=>{const a=$('#intA').value.trim(),b=$('#intB').value.trim();
+    const L=a?$('#intL').value:'(',R=b?$('#intR').value:')';return L+(a||'−∞')+'; '+(b||'+∞')+R;};
+  $('#intGo').onclick=()=>{try{const r=cmd2D('x ∈ '+build());const last=[...st.o2].reverse().find(o=>o.type==='interval');if(last){last.style=$('#intStyle').value;render();}if(r)say(r,'ok');}catch(e){say(e.user?e.message:'Не успях да начертая интервала.','err');}};
+  $('#intUnion').onclick=()=>{
+    const last=[...st.o2].reverse().find(o=>o.type==='interval');
+    if(!last){$('#intGo').click();return;}
+    try{const parts=parseIntervalCmd('x ∈ '+fixLetters(build()));last.parts.push(...parts);last.parts.sort((p,q)=>p.a-q.a);last.src=intervalStr(last.parts);changed();say('Сега: x ∈ '+last.src+'.','ok');}
+    catch(e){say(e.user?e.message:'Не успях да добавя интервала.','err');}
+  };
+}
 {
   const KEYS=[
     ['sin','sin()',-1,'fn'],['cos','cos()',-1,'fn'],['tg','tg()',-1,'fn'],['cotg','cotg()',-1,'fn'],['ln','ln()',-1,'fn'],['lg','lg()',-1,'fn'],['√','√()',-1,'fn'],
@@ -2689,7 +2944,8 @@ $('#pdfBtn').onclick=()=>exportPdf();
     ['7','7',0,'num'],['8','8',0,'num'],['9','9',0,'num'],['+',' + ',0],['−',' − ',0],['(','(',0],[')',')',0],
     ['4','4',0,'num'],['5','5',0,'num'],['6','6',0,'num'],['·','·',0],['÷','/',0],['^','^',0],['²','²',0,'fn'],
     ['1','1',0,'num'],['2','2',0,'num'],['3','3',0,'num'],['=',' = ',0],[';','; ',0],[',',',',0],['⌫','BS',0],
-    ['0','0',0,'num'],['←','L',0],['→','R',0],['Добави ↵','GO',0,'go']
+    ['[','[',0],[']',']',0],['∞','∞',0,'var'],['∪',' ∪ ',0],['x ∈','x ∈ ',0,'fn'],['≤',' ≤ ',0],['≥',' ≥ ',0],
+    ['0','0',0,'num'],['←','L',0],['→','R',0],['<',' < ',0],['>',' > ',0],['Добави ↵','GO',0,'go']
   ];
   const kp=$('#keypad'),inp=$('#cmd'),kb=$('#kbBtn');
   const LABEL={'BS':'Изтрий назад','L':'Курсор наляво','R':'Курсор надясно','GO':'Добави','²':'на квадрат','^':'степен','||':'модул','√()':'корен квадратен'};
@@ -2842,6 +3098,7 @@ function endPtr(e){
   if(drag&&drag.kind==='erase'&&!drag.erased)st.hist[st.mode].pop();
   if(drag&&drag.kind==='rot'&&drag.tap&&down&&!down.moved&&e.type==='pointerup')placePt3(down.sx,down.sy);
   if(drag&&(drag.kind==='p3'||(drag.kind==='vtx'&&drag.conv)))renderList();
+  if(drag&&down&&!down.moved&&st.mode==='2d'&&st.tool==='move'&&(drag.kind==='pan'||drag.kind==='point')&&e.type==='pointerup')toggleDot(down.sx,down.sy);
   if(drag&&down&&!down.moved&&st.mode==='2d'&&st.tool!=='move'&&!isBoard(st.tool)&&e.type==='pointerup')onToolTap(down.sx,down.sy);
   if(drag&&drag.kind==='point')renderList();
   drag=null;down=null;
@@ -2857,7 +3114,7 @@ cv.addEventListener('wheel',e=>{e.preventDefault();const [sx,sy]=local(e);zoomBy
 /* ---------- start ---------- */
 /* ---------- Гео ---------- */
 const GUIDE2={
-  move:['С „Премести“ влачиш точките. Всичко, построено от тях, се променя заедно с тях.','Влачи празно място, за да преместиш чертежа. С колелцето или с два пръста променяш мащаба.','Ако буквата на точка пречи, хвани я и я премести.'],
+  move:['С „Премести“ докосваш точка, за да стане празна или плътна. Така е и при краищата на интервал и при точките в метода на интервалите.','С „Премести“ влачиш точките. Всичко, построено от тях, се променя заедно с тях.','Влачи празно място, за да преместиш чертежа. С колелцето или с два пръста променяш мащаба.','Ако буквата на точка пречи, хвани я и я премести.'],
   point:['Докосни мястото, където искаш точка. Ако „Прилепване към мрежата“ е включено, тя застава на възел от мрежата.','Ако докоснеш окръжност или графика, точката стъпва върху тях и после се движи само по тях.'],
   inter:['Докосни мястото, където се пресичат две линии, окръжности или графики. Пресечната точка се появява веднага.','Ако обектите са близо един до друг, избери първо единия, после другия. При права и окръжност или при две окръжности се появяват и двете пресечни точки.','Пресечната точка се мести сама, когато местиш обектите. Ако те престанат да се пресичат, точката изчезва.'],
   segment:['Докосни първия край на отсечката.','После докосни втория край. Можеш да използваш и точки, които вече съществуват. Дължината се изписва до отсечката.'],
@@ -2899,6 +3156,7 @@ const TASKS=[
   {id:'section',title:'сечение на куб',mode:'3d',steps:['Натисни „Куб“ в раздела „Добави тяло“.','Избери инструмента „Точка“ и докосни ръб или стена. Близо до средата на ръба точката застава точно в средата.','Напиши имената на три точки, например MNB1, и натисни „Добави“. Появяват се равнината и сечението, а лицето му е в списъка.']},
   {id:'perp3',title:'перпендикуляр към равнина',mode:'3d',steps:['Построй равнина през три точки, например като напишеш ABC при куба.','В „Построения“ избери „Перпендикуляр от точка към равнина“, после точката и равнината.','Петата на перпендикуляра се означава с H, а в списъка е разстоянието до равнината.']},
   {id:'vectors',title:'вектори',mode:'2d',steps:['Създай точки, например A(0; 0), B(3; 1) и C(1; 3).','С инструмента „Вектор“ избери начало и край или просто напиши AB.','Напиши AB + AC или 2AB − AC, за да видиш сбор, разлика и умножение с число.']},
+  {id:'imethod',title:'метод на интервалите',mode:'2d',steps:['В раздела „Метод на интервалите“ напиши неравенството, напр. (x − 1)(x + 2)/(x − 4) ≥ 0.','Натисни „Намери точките“. В полето се появяват нулите и точките, в които изразът не съществува. Може да ги поправиш.','Натисни „Раздели оста“. Появяват се интервалите, знаците, змийката и отговорът, оцветен върху оста.']},
   {id:'board',title:'дъска и страници',steps:['От лентата вляво на дъската избери писалка, маркер или умна писалка.','С бутоните долу в средата добавяш страници или копираш текущата. Така показваш решението стъпка по стъпка.','„Запази PDF“ и „Печат“ включват всички страници.']}
 ];
 const geo={open:false,mode:'tool',task:null,step:0};
@@ -2964,6 +3222,8 @@ function rehydrate(o,mode){
       if(o.type==='func')o.f=compile(o.src,['x','y']).f;
       else if(o.type==='vline')o.f=compile(o.src.slice(o.src.indexOf('=')+1),['x','y']).f;
       else if(o.type==='implicit'){const [A,B]=two(o.src,['x','y']);o.F=e=>A(e)-B(e);}
+      else if(o.type==='imethod'&&o.sol)o.sol.forEach(p=>{if(p.a==null)p.a=-Infinity;if(p.b==null)p.b=Infinity;});
+      else if(o.type==='interval')o.parts.forEach(p=>{if(p.a==null)p.a=-Infinity;if(p.b==null)p.b=Infinity;});
     } else {
       if(o.type==='plane'){const [A,B]=two(o.src,['x','y','z']);o.G=e=>A(e)-B(e);}
       else if(o.type==='surface')o.f=compile(o.src.slice(o.src.indexOf('=')+1),['x','y','z']).f;
