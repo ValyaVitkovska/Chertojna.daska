@@ -316,6 +316,7 @@ details.help summary{cursor:pointer;color:var(--accent);font-weight:600;font-siz
       <label><input type="checkbox" data-opt="labels" checked> Означения на върховете</label>
       <label><input type="checkbox" data-opt="proj"> Проекции на точките</label>
       <label><input type="checkbox" data-opt="sections" checked> Сечения на равнините с телата</label>
+      <label><input type="checkbox" data-opt="secOnly"> Равнините: само сечението (без цялата равнина)</label>
     </div>
     <div class="opts">
       <label>Размер на означенията <select data-optsel="lsize" style="font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink)"><option value="15">малки</option><option value="19" selected>средни</option><option value="24">големи</option><option value="30">много големи</option></select></label>
@@ -508,7 +509,7 @@ const st={
   o2:[],o3:[],sliders:[],
   v2:{cx:0,cy:0,scale:50},
   v3:{yaw:-1.9,pitch:0.42,zoom:1},
-  opt:{numline:false,keepShape:false,lsize:19,squares:false,axes3:true,coords3:false,sections:true,exportList:false,axes:true,grid:true,snap:true,special:true,measures:true,transp:true,grid3:true,labels:true,proj:false},
+  opt:{secOnly:false,numline:false,keepShape:false,lsize:19,squares:false,axes3:true,coords3:false,sections:true,exportList:false,axes:true,grid:true,snap:true,special:true,measures:true,transp:true,grid3:true,labels:true,proj:false},
   L:5,
   pen:{color:'ink',size:1},hl:{color:'#F2C230',size:1},
   ink:{'2d':[],'3d':[]},hist:{'2d':[],'3d':[]}
@@ -1868,6 +1869,13 @@ function clipLine(p,u,L){
   if(!(t0<t1))return null;
   return [add3(p,mul3(u,t0)),add3(p,mul3(u,t1))];
 }
+function secEdgeVisible(b,m){
+  if(b.kind==='sphere'){const C=[b.pos.x,b.pos.y,b.pos.z];return rot(sub3(m,C))[2]<=1e-9;}
+  const M=bodyMesh(b),cen=avg3(M.V);let best=null,bd=Infinity;
+  for(const f of M.F){const pts=f.map(i=>M.V[i]);let n=newell(pts);const fc=avg3(pts);if(!M.wind&&dot3(sub3(fc,cen),n)<0)n=mul3(n,-1);
+    const d=Math.abs(dot3(n,sub3(m,pts[0])));if(d<bd){bd=d;best=n;}}
+  return best?rot(best)[2]<0:true;
+}
 function bodySection(b,pl){
   const n=pl.n,nl=len3(n),nh=mul3(n,1/nl);
   const ref=Math.abs(nh[2])<0.9?[0,0,1]:[1,0,0];const u=mul3(cross3(nh,ref),1/len3(cross3(nh,ref))),v=cross3(nh,u);
@@ -2232,18 +2240,25 @@ function render3D(T){
       const sa=(ra1-ra0)/T2,sb=(rb1-rb0)/T2;
       const at=(a,b)=>[p0[0]+u[0]*a+v[0]*b,p0[1]+u[1]*a+v[1]*b,p0[2]+u[2]*a+v[2]*b];
       const sh=0.6+0.4*Math.abs(dot3(rot(nh),LV));const col=shadeRGB(rgb,sh).join(',');
-      for(let i=0;i<T2;i++)for(let j=0;j<T2;j++){
-        const a=ra0+i*sa,b=rb0+j*sb;const poly=[at(a,b),at(a+sa,b),at(a+sa,b+sb),at(a,b+sb)];
-        if(poly.length<3)continue;const pp=poly.map(pr);
-        items.push({k:'poly',d:pp.reduce((q,x)=>q+x[2],0)/pp.length,pts:pp,fill:`rgba(${col},${fillA(o,0.33)})`});
-      }
-      const outline=[at(ra0,rb0),at(ra1,rb0),at(ra1,rb1),at(ra0,rb1)].map(pr);
-      st.pick.planes.push({id:o.id,poly:outline,pl:pl0});
-      for(let i=0;i<outline.length;i++){const A=outline[i],B=outline[(i+1)%outline.length];items.push({k:'line',d:Math.min(A[2],B[2])-1e-3,a:A,b:B,color:ec,lw:1.4});}
-      if(outline.length){const top=outline.reduce((m,q)=>q[1]<m[1]?q:m,outline[0]);labels.push({x:top[0],y:top[1],ox:10,oy:14,t:o.name,color:ec,greek:true,owner:o,key:'n'});}
-      if(st.opt.sections)for(const b of st.o3){
-        if(b.type!=='body'||!b.visible)continue;const sp=bodySection(b,pl0);if(!sp)continue;
-        const pp=sp.map(pr);items.push({k:'poly',d:pp.reduce((q,x)=>q+x[2],0)/pp.length-0.02,pts:pp,fill:`rgba(${shadeRGB(rgb,0.9).join(',')},${Math.min(1,fillA(o,0.33)*1.9)})`,stroke:ec,lw:2.2});
+      const secs=[];for(const b of st.o3){if(b.type!=='body'||!b.visible)continue;const sp=bodySection(b,pl0);if(sp)secs.push({b,sp});}
+      const secOnly=(o.secOnly!=null?o.secOnly:st.opt.secOnly)&&secs.length>0;
+      if(!secOnly){
+        for(let i=0;i<T2;i++)for(let j=0;j<T2;j++){
+          const a=ra0+i*sa,b=rb0+j*sb;const poly=[at(a,b),at(a+sa,b),at(a+sa,b+sb),at(a,b+sb)];const pp=poly.map(pr);
+          items.push({k:'poly',d:pp.reduce((q,x)=>q+x[2],0)/pp.length,pts:pp,fill:`rgba(${col},${fillA(o,0.33)})`});
+        }
+        const outline=[at(ra0,rb0),at(ra1,rb0),at(ra1,rb1),at(ra0,rb1)].map(pr);
+        st.pick.planes.push({id:o.id,poly:outline,pl:pl0});
+        for(let i=0;i<outline.length;i++){const A=outline[i],B=outline[(i+1)%outline.length];items.push({k:'line',d:Math.min(A[2],B[2])-1e-3,a:A,b:B,color:ec,lw:1.4});}
+        if(outline.length){const top=outline.reduce((m,q)=>q[1]<m[1]?q:m,outline[0]);labels.push({x:top[0],y:top[1],ox:10,oy:14,t:o.name,color:ec,greek:true,owner:o,key:'n'});}
+      } else secs.forEach(s=>st.pick.planes.push({id:o.id,poly:s.sp.map(pr),pl:pl0}));
+      if(st.opt.sections||secOnly)for(const {b,sp} of secs){
+        const pp=sp.map(pr);
+        items.push({k:'poly',d:pp.reduce((q,x)=>q+x[2],0)/pp.length-0.02,pts:pp,fill:`rgba(${shadeRGB(rgb,0.9).join(',')},${secOnly?fillA(o,0.55):Math.min(1,fillA(o,0.33)*1.9)})`});
+        for(let i=0;i<sp.length;i++){
+          const A=sp[i],B=sp[(i+1)%sp.length],vis=secEdgeVisible(b,lerp3(A,B,0.5));if(!vis&&!st.opt.transp)continue;
+          const PA=pr(A),PB=pr(B);items.push({k:'line',d:Math.min(PA[2],PB[2])-0.03,a:PA,b:PB,color:ec,lw:2.4,dash:!vis});
+        }
       }
       continue;
     }
@@ -2817,6 +2832,7 @@ function objItem(o){
     };
     nr.append(ni);cpal.append(nr);
   }
+  if(o.type==='plane'||o.type==='plane3'){const sl=el('label','dsh');const sc=el('input');sc.type='checkbox';sc.checked=o.secOnly!=null?o.secOnly:st.opt.secOnly;sc.onchange=()=>{o.secOnly=sc.checked;render();};sl.append(sc,el('span',null,'Само сечението (без цялата равнина)'));cpal.append(sl);}
   if(o.type==='interval'){const hl=el('label','oprow');hl.append(el('span',null,'Вид'));const hs=el('select');hs.style.cssText='font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink)';
     [['bridge','с дъги и черти'],['hatch','със защриховка'],['plain','само върху оста']].forEach(([v,t])=>{const op=el('option',null,t);op.value=v;hs.append(op);});hs.value=o.style||(o.nohatch?'plain':'hatch');hs.onchange=()=>{o.style=hs.value;render();};hl.append(hs);cpal.append(hl);}
   cb.title='Цвят и прозрачност';cb.setAttribute('aria-label','Цвят и прозрачност');
