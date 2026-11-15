@@ -146,6 +146,7 @@ details.help summary{cursor:pointer;color:var(--accent);font-weight:600;font-siz
 .bt[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
 .brandrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .boardbar.collapsed>:not(.bt-toggle){display:none}
+.bt.warn{color:var(--err);background:var(--field)}
 .boardbar .sep{height:1px;background:var(--line);margin:3px 4px;flex:0 0 auto}
 .palette{position:absolute;left:66px;top:84px;display:flex;flex-direction:column;gap:8px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 3px 12px rgba(20,30,50,.08)}
 .palette .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:236px}
@@ -292,6 +293,18 @@ details.help summary{cursor:pointer;color:var(--accent);font-weight:600;font-siz
       <div class="bodies" id="bodies"></div>
     </section>
 
+    <section id="fromSec" class="cons" hidden>
+      <h2 class="sec">Тяло от фигура в равнината</h2>
+      <select id="fromFig" aria-label="Фигура от равнината"></select>
+      <div class="consArgs">
+        <label><span>тяло</span><select id="fromKind"></select></label>
+        <label><span>височина h</span><input id="fromH" type="text" inputmode="decimal" value="3" style="font:inherit;font-size:14px;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);width:100%"></label>
+        <label id="fromApexL"><span>върхът е над</span><select id="fromApex"></select></label>
+      </div>
+      <button class="btn" type="button" id="fromGo">Построй тялото</button>
+      <p class="inthint" id="fromHint">Начертай многоъгълник или окръжност в „Равнина (2D)“. Тук фигурата се вижда в основата и може да се допълни до призма, пирамида, цилиндър или конус.</p>
+    </section>
+
     <section id="consSec" class="cons" hidden>
       <h2 class="sec">Построения</h2>
       <select id="consType" aria-label="Вид построение"></select>
@@ -310,6 +323,7 @@ details.help summary{cursor:pointer;color:var(--accent);font-weight:600;font-siz
     </div>
     <div class="opts" id="opts3d" hidden>
       <label><input type="checkbox" data-opt="transp" checked> Прозрачни тела</label>
+      <label><input type="checkbox" data-opt="show2d" checked> Чертежът от 2D в основата</label>
       <label><input type="checkbox" data-opt="axes3" checked> Координатни оси</label>
       <label><input type="checkbox" data-opt="coords3"> Координати и уравнения</label>
       <label><input type="checkbox" data-opt="grid3" checked> Мрежа в равнината Oxy</label>
@@ -500,6 +514,20 @@ const CYR={'х':'x','Х':'X','у':'y','У':'Y','а':'a','А':'A','с':'c','С':'
 function fixLetters(s){return s.replace(/[хХуУаАсСеЕкКоОрРВМНТз]/g,c=>CYR[c]||c);}
 function splitTop(s,sep){const out=[];let d=0,cur='';for(const c of s){if(c==='('||c==='[')d++;else if(c===')'||c===']')d--;if(c===sep&&d===0){out.push(cur);cur='';}else cur+=c;}out.push(cur);return out;}
 
+const SUBD='₀₁₂₃₄₅₆₇₈₉',SUBL={a:'ₐ',e:'ₑ',o:'ₒ',x:'ₓ',h:'ₕ',k:'ₖ',l:'ₗ',m:'ₘ',n:'ₙ',p:'ₚ',s:'ₛ',t:'ₜ',i:'ᵢ',j:'ⱼ',r:'ᵣ',u:'ᵤ',v:'ᵥ'};
+const subDigits=k=>String(k).split('').map(c=>SUBD[+c]).join('');
+function toSub(t){
+  t=String(t).trim();
+  t=t.replace(/_\{([^}]*)\}|_([0-9a-zA-Zа-яА-Я]+)/g,(m,a,b)=>{const s=a!=null?a:b;const ok=s.split('').every(c=>/\d/.test(c)||(SUBL[c]&&c===c.toLowerCase()));
+    return ok?s.split('').map(c=>/\d/.test(c)?SUBD[+c]:SUBL[c]).join(''):'_{'+s+'}';});
+  return t.replace(/^([^\d_{}]*[^\d\s_{}])(\d+)$/,(m,a,d)=>a+subDigits(d));
+}
+function normName(n){
+  if(n==null)return n;let s=String(n);
+  for(let i=0;i<10;i++)s=s.split(SUBD[i]).join(String(i));
+  for(const [k,v] of Object.entries(SUBL))s=s.split(v).join(k);
+  return s.replace(/[_{}\s]/g,'');
+}
 /* ---------- state ---------- */
 const cv=$('#cv'),ctx=cv.getContext('2d');
 let W=0,H=0,DPR=1;
@@ -509,10 +537,10 @@ const st={
   o2:[],o3:[],sliders:[],
   v2:{cx:0,cy:0,scale:50},
   v3:{yaw:-1.9,pitch:0.42,zoom:1},
-  opt:{secOnly:false,numline:false,keepShape:false,lsize:19,squares:false,axes3:true,coords3:false,sections:true,exportList:false,axes:true,grid:true,snap:true,special:true,measures:true,transp:true,grid3:true,labels:true,proj:false},
+  opt:{show2d:true,secOnly:false,numline:false,keepShape:false,lsize:19,squares:false,axes3:true,coords3:false,sections:true,exportList:false,axes:true,grid:true,snap:true,special:true,measures:true,transp:true,grid3:true,labels:true,proj:false},
   L:5,
   pen:{color:'ink',size:1},hl:{color:'#F2C230',size:1},
-  ink:{'2d':[],'3d':[]},hist:{'2d':[],'3d':[]}
+  ink:{'2d':[],'3d':[]},hist:{'2d':[],'3d':[]},undo:{stack:[],last:null,redo:[]}
 };
 let uid=1;
 
@@ -637,9 +665,14 @@ function drawMarked(g,t,x,y,o){
   });
 }
 function vecLabel(t,x,y,color,T){drawMarked(ctx,t,x,y,{font:'italic 600 15px "Times New Roman",Georgia,serif',color,halo:T.paper,align:'center',base:'middle',size:15});}
+function appendSub(parent,txt){
+  const re=/_\{([^}]*)\}|_([^\s_])/g;let last=0,m;
+  while((m=re.exec(txt))){if(m.index>last)parent.append(document.createTextNode(txt.slice(last,m.index)));const sb=document.createElement('sub');sb.textContent=m[1]!=null?m[1]:m[2];parent.append(sb);last=re.lastIndex;}
+  if(last<txt.length)parent.append(document.createTextNode(txt.slice(last)));
+}
 function setRich(e,t){
-  if(!/\u0001/.test(t)){e.textContent=t;return;}
-  e.textContent='';markedParts(t).forEach(p=>e.append(p.v?el('span','vec',p.t):document.createTextNode(p.t)));
+  if(!/\u0001/.test(t)){if(t.indexOf('_')<0){e.textContent=t;return;}e.textContent='';appendSub(e,t);return;}
+  e.textContent='';markedParts(t).forEach(p=>{if(p.v){const sp=el('span','vec');appendSub(sp,p.t);e.append(sp);}else appendSub(e,p.t);});
 }
 function bisFoot(o){
   if(!o)return null;const A=P(o.a),V=P(o.v),B=P(o.b);
@@ -671,9 +704,9 @@ function deps(o){
 }
 function addObj2(o){o.id=uid++;if(!o.color)o.color=nextColor();o.visible=true;o.params=o.params||[];st.o2.push(o);return o;}
 function nextPointName(list,letters){
-  const used=new Set(list.map(o=>o.name));
+  const used=new Set(list.map(o=>normName(o.name)));
   const L=letters||'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  for(let k=0;;k++){for(const c of L){const n=k?c+k:c;if(!used.has(n))return n;}}
+  for(let k=0;;k++){for(const c of L){const n=k?c+subDigits(k):c;if(!used.has(normName(n)))return n;}}
 }
 function newPoint(x,y,name){return addObj2({type:'point',name:name||nextPointName(st.o2.filter(isPt)),x,y,color:FREE_PT});}
 function nextFuncName(){
@@ -681,8 +714,8 @@ function nextFuncName(){
   for(const c of ['f','g','h','p','q','r','s','u','v','w']) if(!used.has(c)) return c;
   let i=1;while(used.has('f'+i))i++;return 'f'+i;
 }
-function nextCircleName(){const used=new Set(st.o2.filter(isCircle).map(o=>o.name));if(!used.has('k'))return 'k';let i=2;while(used.has('k'+i))i++;return 'k'+i;}
-function uniqueName(base){const used=new Set(st.o2.filter(isPt).map(o=>o.name));if(!used.has(base))return base;let i=1;while(used.has(base+i))i++;return base+i;}
+function nextCircleName(){const used=new Set(st.o2.filter(isCircle).map(o=>o.name));if(!used.has('k'))return 'k';let i=2;while(used.has('k'+subDigits(i)))i++;return 'k'+subDigits(i);}
+function uniqueName(base){const used=new Set(st.o2.filter(isPt).map(o=>o.name));if(!used.has(base))return base;let i=1;while(used.has(base+subDigits(i)))i++;return base+subDigits(i);}
 function deleteObj2(id){
   const del=new Set([id]);let grew=true;
   while(grew){grew=false;for(const o of st.o2){if(!del.has(o.id)&&deps(o).some(d=>del.has(d))){del.add(o.id);grew=true;}}}
@@ -727,7 +760,7 @@ function addBody(kind){
 
 /* ---------- commands ---------- */
 function parsePointLiteral(s,dim){
-  const m=s.match(/^\s*([A-Z][A-Za-z0-9_']*)?\s*=?\s*\((.*)\)\s*$/);
+  const m=s.match(/^\s*([A-Z][A-Za-z0-9_'₀-₉ₐₑₒₓₕₖₗₘₙₚₛₜᵢⱼᵣᵤᵥ{}]*)?\s*=?\s*\((.*)\)\s*$/);
   if(!m) return null;
   const inner=m[2];
   const parts=inner.includes(';')?inner.split(';'):splitTop(inner,',');
@@ -744,7 +777,7 @@ function parsePointLiteral(s,dim){
   }
   const params=[...new Set(comps.flatMap(c=>c.params))];
   ensureSliders(params);
-  return {name:m[1]||null,coords:comps.map(c=>c.f(ENV))};
+  return {name:m[1]?toSub(m[1]):null,coords:comps.map(c=>c.f(ENV))};
 }
 function parseBase(src){
   const s=fixLetters(src).replace(/[−–]/g,'-');const re=/([A-Z][0-9]*)?\s*\(\s*([^;()]+?)\s*;\s*([^;()]+?)\s*\)/g;
@@ -763,9 +796,9 @@ function cmd2D(raw){
   const s=fixLetters(raw.trim());if(!s)return;
   {const parts=parseIntervalCmd(s);if(parts){const sel=document.getElementById('intStyle');const o=addObj2({type:'interval',parts,src:intervalStr(parts),style:sel?sel.value:'bridge'});changed();return 'Начертах x ∈ '+o.src+'.';}}
   {const c=s.replace(/\s+/g,'').replace(/[−–]/g,'-').replace(/^вектор/i,'');
-    const re=/([+\-]?)(\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?)?[*·]?([A-Z][0-9]*)([A-Z][0-9]*)/g;let m,acc='',terms=[];
+    const re=/([+\-]?)(\d+(?:[.,]\d+)?(?:\/\d+(?:[.,]\d+)?)?)?[*·]?([A-Z](?:_?[0-9₀-₉]+)?)([A-Z](?:_?[0-9₀-₉]+)?)/g;let m,acc='',terms=[];
     while((m=re.exec(c))){acc+=m[0];let k=1;if(m[2]){const [p,q]=m[2].replace(/,/g,'.').split('/');k=parseFloat(p)/(q?parseFloat(q):1);}if(m[1]==='-')k=-k;
-      const A=st.o2.find(o=>isPt(o)&&o.name===m[3]),B=st.o2.find(o=>isPt(o)&&o.name===m[4]);
+      const A=st.o2.find(o=>isPt(o)&&normName(o.name)===normName(m[3])),B=st.o2.find(o=>isPt(o)&&normName(o.name)===normName(m[4]));
       if(acc===c.slice(0,acc.length)&&(!A||!B))throw userErr('Няма точка '+(!A?m[3]:m[4])+'. Създай я първо, напр. '+(!A?m[3]:m[4])+'(1; 2).');
       terms.push({k,a:A&&A.id,b:B&&B.id});}
     if(terms.length&&acc===c){
@@ -775,9 +808,9 @@ function cmd2D(raw){
   }
   const pt=parsePointLiteral(s,2);
   if(pt){
-    const ex=pt.name&&st.o2.find(o=>o.type==='point'&&o.name===pt.name);
+    const ex=pt.name&&st.o2.find(o=>o.type==='point'&&normName(o.name)===normName(pt.name));
     if(ex){ex.x=pt.coords[0];ex.y=pt.coords[1];changed();return 'Преместих '+ex.name+'.';}
-    if(pt.name&&st.o2.find(o=>isPt(o)&&o.name===pt.name)) throw userErr('Името '+pt.name+' вече е заето.');
+    if(pt.name&&st.o2.find(o=>isPt(o)&&normName(o.name)===normName(pt.name))) throw userErr('Името '+pt.name+' вече е заето.');
     const o=newPoint(pt.coords[0],pt.coords[1],pt.name||undefined);changed();return 'Добавих точка '+o.name+'.';
   }
   const eq=s.split('=');
@@ -826,7 +859,7 @@ function linearCoeffs(G){
 function cmd3D(raw){
   const s=fixLetters(raw.trim());if(!s)return;
   const compact=s.replace(/^(права|равнина)\s*/i,'').replace(/[\s()]/g,'');
-  if(/^([A-Z][0-9₁']*){2,3}$/.test(compact)){
+  if(/^([A-Z](?:_?[0-9₀-₉]+)?'*){2,3}$/.test(compact)){
     const refs=namesToRefs(compact);
     if(refs&&new Set(refs.map(String)).size===refs.length){
       const o=refs.length===2?addObj3({type:'line3',kind:'pp',refs,name:nextLineName()}):addObj3({type:'plane3',kind:'ppp',refs,name:nextGreek()});
@@ -837,7 +870,7 @@ function cmd3D(raw){
   }
   const pt=parsePointLiteral(s,3);
   if(pt){
-    const ex=pt.name&&st.o3.find(o=>o.type==='point3'&&o.name===pt.name);
+    const ex=pt.name&&st.o3.find(o=>o.type==='point3'&&normName(o.name)===normName(pt.name));
     if(ex){[ex.x,ex.y,ex.z]=pt.coords;changed();return 'Преместих '+ex.name+'.';}
     const name=pt.name||nextPointName(st.o3.filter(o=>o.type==='point3'));
     addObj3({type:'point3',name,x:pt.coords[0],y:pt.coords[1],z:pt.coords[2],color:FREE_PT});changed();return 'Добавих точка '+name+'.';
@@ -883,7 +916,19 @@ function theme(){
   const cs=getComputedStyle(document.documentElement);const g=n=>cs.getPropertyValue(n).trim();
   return {paper:g('--paper'),ink:g('--ink'),soft:g('--ink-soft'),grid:g('--grid'),major:g('--grid-major'),axis:g('--axis'),accent:g('--accent')};
 }
+function textSub(t,x,y,o){
+  const F=o.font||'12px "Golos Text",system-ui,sans-serif',m=F.match(/(\d+(?:\.\d+)?)px/),sz=m?+m[1]:12,Fs=F.replace(/(\d+(?:\.\d+)?)px/,(sz*0.68).toFixed(1)+'px');
+  const segs=[];const re=/_\{([^}]*)\}|_([^\s_])/g;let last=0,mm;
+  while((mm=re.exec(t))){if(mm.index>last)segs.push({s:t.slice(last,mm.index),sub:false});segs.push({s:mm[1]!=null?mm[1]:mm[2],sub:true});last=re.lastIndex;}
+  if(last<t.length)segs.push({s:t.slice(last),sub:false});
+  const ws=segs.map(g=>{ctx.font=g.sub?Fs:F;return ctx.measureText(g.s).width;}),tot=ws.reduce((a,b)=>a+b,0);
+  let cx=o.align==='center'?x-tot/2:o.align==='right'?x-tot:x;ctx.textAlign='left';ctx.textBaseline=o.base||'alphabetic';
+  segs.forEach((g,i)=>{ctx.font=g.sub?Fs:F;const yy=g.sub?y+sz*0.3:y;
+    if(o.halo){ctx.lineWidth=3.5;ctx.strokeStyle=o.halo;ctx.lineJoin='round';ctx.strokeText(g.s,cx,yy);}
+    ctx.fillStyle=o.color;ctx.fillText(g.s,cx,yy);cx+=ws[i];});
+}
 function text(t,x,y,o){
+  if(typeof t==='string'&&t.indexOf('_')>=0){textSub(t,x,y,o);return;}
   ctx.font=o.font||'12px "Golos Text",system-ui,sans-serif';ctx.textAlign=o.align||'left';ctx.textBaseline=o.base||'alphabetic';
   if(o.halo){ctx.lineWidth=3.5;ctx.strokeStyle=o.halo;ctx.lineJoin='round';ctx.strokeText(t,x,y);}
   ctx.fillStyle=o.color;ctx.fillText(t,x,y);
@@ -1524,6 +1569,7 @@ const TOOLS=[
   {id:'par',name:'Успоредна',hint:'Избери права или отсечка, после точка, през която минава успоредната права.',icon:'<path d="M4 10L20 4M4 20L20 14"/>'},
   {id:'angle',name:'Ъгъл',n:3,hint:'Избери точка от първото рамо, после върха, после точка от второто рамо.',icon:'<path d="M20 19H4L16 6"/><path d="M10 19a6 6 0 0 0-1.8-4.3"/>'},
   {id:'tangent',name:'Допирателна',hint:'Докосни графика на функция (допирателна в тази точка) или избери окръжност и после точка.',icon:'<circle cx="12" cy="14" r="6"/><path d="M2 8h20"/><circle cx="12" cy="8" r="1.6" fill="currentColor"/>'},
+  {id:'hide',name:'Скрий',hint:'Докосни обект на чертежа, за да го скриеш. Скритите обекти се показват отново с окото в списъка или с „Покажи скритите“.',icon:'<path d="M3 3l18 18"/><path d="M10.6 5.1A10.5 10.5 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.8-1.3"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'},
   {id:'vec',name:'Вектор',n:2,hint:'Избери началото, после края на вектора.',icon:'<path d="M4 19L19 6"/><path d="M12 6h7v7"/>'},
   {id:'vmove',name:'Пренеси вектор',hint:'Избери вектор, после точка. От нея се построява равен на него вектор.',icon:'<path d="M3 15L12 8"/><path d="M8 8h4v4"/><path d="M10 21l9-7" /><path d="M15 14h4v4"/>'},
   {id:'bisect',name:'Ъглополовяща',n:3,hint:'Избери точка от първото рамо, после върха, после точка от второто рамо. Ъглополовящата пресича отсечката между двете точки в L.',icon:'<path d="M20 19H4L16 6"/><path d="M4 19l16-7"/>'},
@@ -1535,6 +1581,10 @@ const TOOL=Object.fromEntries(TOOLS.map(t=>[t.id,t]));
 const TOOLS3=[
   {id:'move',name:'Завърти',hint:'Влачи празно място, за да завъртиш. Влачи точка, за да я местиш по нейния ръб, стена, права или равнина. Влачи връх на тяло, за да промениш формата му.',icon:'<path d="M20 12a8 8 0 1 1-3-6.2"/><path d="M20 4v5h-5"/>'},
   {id:'pt3',name:'Точка',hint:'Докосни ръб, стена, права или равнина, за да поставиш точка върху тях. На празно място точката отива в основната равнина. Влаченето на празно място върти.',icon:'<circle cx="12" cy="12" r="3.6" fill="currentColor"/>'},
+  {id:'seg3',name:'Отсечка',hint:'Докосни две точки: върхове, построени точки или ново място върху ръб, стена или в пространството.',icon:'<path d="M5 18L19 6"/><circle cx="5" cy="18" r="2" fill="currentColor"/><circle cx="19" cy="6" r="2" fill="currentColor"/>'},
+  {id:'ln3',name:'Права',hint:'Докосни две точки, през които да мине правата.',icon:'<path d="M2 20L22 4"/><circle cx="8" cy="15.2" r="2" fill="currentColor"/><circle cx="16" cy="8.8" r="2" fill="currentColor"/>'},
+  {id:'pl3',name:'Равнина',hint:'Докосни три точки, през които да мине равнината.',icon:'<path d="M3 17l5-9h13l-5 9z"/><circle cx="8" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="16" cy="17" r="1.6" fill="currentColor"/>'},
+  {id:'hide',name:'Скрий',hint:'Докосни тяло, равнина, права или точка, за да я скриеш. Връщаш я с окото в списъка или с „Покажи скритите“.',icon:'<path d="M3 3l18 18"/><path d="M10.6 5.1A10.5 10.5 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.8-1.3"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'},
   {id:'lift',name:'Височина',hint:'Влачи свободна точка нагоре или надолу. Ако искаш да виждаш проекцията ѝ в основата, включи „Проекции на точките“.',icon:'<path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/><circle cx="12" cy="12" r="2.4" fill="currentColor"/>'}
 ];
 const TOOL3=Object.fromEntries(TOOLS3.map(t=>[t.id,t]));
@@ -1550,7 +1600,7 @@ function setTool(id){
   buildPalette();updateCursor();setHint();render();
   if(typeof geoOnTool==='function')geoOnTool();
 }
-function updateCursor(){const t=st.tool;cv.style.cursor=t==='text'?'text':t==='eraser'?'cell':isBoard(t)||t==='pt3'?'crosshair':(st.mode==='3d'||t==='move')?'grab':'crosshair';}
+function updateCursor(){const t=st.tool;cv.style.cursor=t==='text'?'text':t==='eraser'?'cell':isBoard(t)||['pt3','seg3','ln3','pl3','hide'].includes(t)?'crosshair':(st.mode==='3d'||t==='move')?'grab':'crosshair';}
 function setHint(msg,flash){
   const h=$('#hint');
   h.textContent=msg||(isBoard(st.tool)?BOARD_HINT[st.tool]:st.mode==='3d'?(TOOL3[st.tool]||TOOL3.move).hint:TOOL[st.tool].hint);
@@ -1579,6 +1629,13 @@ function regularTangPoly(n){
 }
 function onToolTap(sx,sy){
   const t=st.tool;
+  if(t==='hide'){
+    let id=hitPoint(sx,sy,false)||hitVec(sx,sy)||hitLine(sx,sy)||hitCircle(sx,sy)||hitFunc(sx,sy);
+    if(!id){const h=(st.intHits||[]).find(r=>sx>=r.x1&&sx<=r.x2&&sy>=r.y0&&sy<=r.y1);if(h)id=h.id;}
+    if(!id){const hs=hitShapes(sx,sy);if(hs.length)id=hs[0].id;}
+    if(!id){setHint('Тук няма обект за скриване.',true);return;}
+    const o=byId(id);o.visible=false;changed();say('Скрих '+plain(describe(o)).split(/[:=(]/)[0].trim()+'. Връща се с окото в списъка.','ok');return;
+  }
   if(t==='inter'){
     const hits=hitShapes(sx,sy);
     if(!st.pending.length){
@@ -1720,6 +1777,7 @@ function bodyMesh(b){
       break;}
   }
   V=V.map(v=>[v[0]+b.pos.x,v[1]+b.pos.y,v[2]+b.pos.z]);
+  if(labels&&b.vlab&&b.vlab.length===labels.length)labels=b.vlab.slice();
   return {V,F,labels,wind};
 }
 const regArea=(n,a)=>n*a*a/(4*Math.tan(Math.PI/n));
@@ -1754,6 +1812,7 @@ function computeL(){
   for(const o of st.o3){
     if(!o.visible)continue;
     if(o.type==='point3')m=Math.max(m,Math.abs(o.x)+1,Math.abs(o.y)+1,Math.abs(o.z)+1);
+    if(st.opt.show2d&&o===st.o3[0])st.o2.forEach(f=>{if(!f.visible)return;if(f.type==='polygon')f.pts.map(P).forEach(q=>{if(isFinite(q.x))m=Math.max(m,Math.abs(q.x)+1,Math.abs(q.y)+1);});else if(isCircle(f)){const C=circleOf(f);if(C)m=Math.max(m,Math.abs(C.x)+C.r+1,Math.abs(C.y)+C.r+1);}});
     if(o.type==='pt3c'){const q=cpt3(o);if(q&&q.every(isFinite))m=Math.max(m,...q.map(v=>Math.abs(v)+1));}
     if(o.type==='body'){
       if(o.kind==='sphere'){m=Math.max(m,Math.abs(o.pos.x)+o.p.r+1,Math.abs(o.pos.y)+o.p.r+1,Math.abs(o.pos.z)+o.p.r+1);}
@@ -1915,13 +1974,13 @@ function vecStr(u){const iv=intVec(u);const w=iv||mul3(u,1/len3(u));return '('+w
 function nextGreek(){
   const used=new Set(st.o3.filter(o=>o.type==='plane'||o.type==='plane3').map(o=>o.name));
   const G=['α','β','γ','δ','ε','λ','μ','ν','σ','τ','φ','ω'];
-  for(let k=0;;k++)for(const g of G){const n=k?g+k:g;if(!used.has(n))return n;}
+  for(let k=0;;k++)for(const g of G){const n=k?g+subDigits(k):g;if(!used.has(n))return n;}
 }
 function nextLineName(){
   const used=new Set(st.o3.filter(o=>o.type==='line3').map(o=>o.name));
-  for(let k=0;;k++)for(const c of 'abcdglmnpqst'){const n=k?c+k:c;if(!used.has(n))return n;}
+  for(let k=0;;k++)for(const c of 'abcdglmnpqst'){const n=k?c+subDigits(k):c;if(!used.has(n))return n;}
 }
-function uniqueName3(base){const used=new Set(st.o3.filter(isPt3).map(o=>o.name));if(!used.has(base))return base;let i=1;while(used.has(base+i))i++;return base+i;}
+function uniqueName3(base){const used=new Set(st.o3.filter(isPt3).map(o=>o.name));if(!used.has(base))return base;let i=1;while(used.has(base+subDigits(i)))i++;return base+subDigits(i);}
 function deleteObj3(id){
   const del=new Set([id]);let grew=true;
   const hits=r=>typeof r==='string'?del.has(+r.split(':')[1]):del.has(r);
@@ -2017,7 +2076,7 @@ function inPoly(x,y,P){let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){co
 function nextName3(){
   const used=new Set(st.o3.filter(isPt3).map(o=>o.name));
   st.o3.forEach(b=>{if(b.type==='body'){const M=bodyMesh(b);(M.labels||[]).forEach(l=>used.add(l));}});
-  for(let k=0;;k++)for(const c of 'MNPRSTKLEFGUVWXYZ'){const n=k?c+k:c;if(!used.has(n))return n;}
+  for(let k=0;;k++)for(const c of 'MNPRSTKLEFGUVWXYZ'){const n=k?c+subDigits(k):c;if(!used.has(n))return n;}
 }
 const DRAG3=['onseg','online','onface','onplane','ratio'];
 function hitPt3(sx,sy){
@@ -2055,8 +2114,40 @@ function placePt3(sx,sy){
     }
   }
   if(o.type==='pt3c')o.color=DEP_PT;
-  o.name=nextName3();addObj3(o);changed();
+  o.name=nextName3();addObj3(o);changed();if(st.tool!=='pt3'){return o;}
   say('Поставих точка '+o.name+'. Влачи я, за да я преместиш'+(o.type==='point3'?'; с „Височина“ я вдигаш или сваляш.':' по нейния обект.'),'ok');
+}
+function hide3(sx,sy){
+  const pk=st.pick||{},R=st.lastPtrType==='touch'?16:10;let o=null;
+  const p=(pk.points||[]).find(q=>q.o&&Math.hypot(q.x-sx,q.y-sy)<R);if(p)o=p.o;
+  if(!o){let bd=R;for(const l of pk.lines||[]){const d=segParam(sx,sy,l.A,l.B).d;if(d<bd){bd=d;o=o3ById(l.id);}}}
+  if(!o){const f=(pk.faces||[]).find(f=>inPoly(sx,sy,f.poly));if(f)o=o3ById(+f.refs[0].split(':')[1]);}
+  if(!o){const pl=(pk.planes||[]).find(q=>inPoly(sx,sy,q.poly.map(z=>[z[0],z[1]])));if(pl)o=o3ById(pl.id);}
+  if(!o){const sph=st.o3.find(b=>b.visible&&b.type==='body'&&b.kind==='sphere'&&(()=>{const C=pr([b.pos.x,b.pos.y,b.pos.z]);return Math.hypot(C[0]-sx,C[1]-sy)<b.p.r*S3;})());if(sph)o=sph;}
+  if(!o){setHint('Тук няма обект за скриване.',true);return;}
+  o.visible=false;changed();say('Скрих '+o.name+'. Връща се с окото в списъка.','ok');
+}
+function pickRef3(sx,sy){
+  const R=st.lastPtrType==='touch'?18:12;let best=null,bd=R;
+  for(const p of (st.pick&&st.pick.points)||[]){const d=Math.hypot(p.x-sx,p.y-sy);if(d<bd){bd=d;best=p;}}
+  if(best)return best.o?best.o.id:'v:'+best.b.id+':'+best.i;
+  const o=placePt3(sx,sy);return o?o.id:null;
+}
+function tap3(sx,sy){
+  const t=st.tool;if(t==='pt3'){placePt3(sx,sy);return;}
+  if(t==='hide'){hide3(sx,sy);return;}
+  const need=t==='pl3'?3:2,r=pickRef3(sx,sy);if(r==null)return;
+  if(st.pending.some(x=>String(x)===String(r))){render();return;}
+  st.pending.push(r);
+  if(st.pending.length<need){setHint('Избрани: '+st.pending.map(refName).join(', ')+'. Избери още '+(need-st.pending.length)+'.');render();return;}
+  const refs=st.pending.slice();st.pending=[];setHint();
+  let o;
+  if(t==='seg3')o=addObj3({type:'line3',kind:'seg',refs,name:refs.map(refName).join('')});
+  else if(t==='ln3')o=addObj3({type:'line3',kind:'pp',refs,name:nextLineName()});
+  else o=addObj3({type:'plane3',kind:'ppp',refs,name:nextGreek()});
+  if(!(t==='pl3'?planeOf(o):lineOf3(o))){st.o3=st.o3.filter(x=>x!==o);say(t==='pl3'?'Трите точки лежат на една права.':'Точките съвпадат.','err');}
+  else say('Построих '+(t==='seg3'?'отсечката ':t==='ln3'?'правата ':'равнината ')+o.name+'.','ok');
+  changed();
 }
 function movePt3(drag,sx,sy){
   const o=drag.o,ray=ray3(sx,sy);
@@ -2143,9 +2234,56 @@ function moveVertex(dr,sx,sy){
   }
   b.baseSrc=baseStr(b);
 }
+/* ---------- 3D bodies from 2D figures ---------- */
+function figs2D(){return st.o2.filter(o=>o.visible&&(o.type==='polygon'||isCircle(o)));}
+function figName(o){return o.type==='polygon'?'многоъгълник '+o.pts.map(nm).join(''):'окръжност '+o.name;}
+function refreshFrom(){
+  const sel=$('#fromFig'),prev=sel.value;sel.textContent='';const fs=figs2D();
+  $('#fromGo').disabled=!fs.length;
+  if(!fs.length){const op=el('option',null,'няма фигури в 2D');op.value='';sel.append(op);}
+  fs.forEach(o=>{const op=el('option',null,figName(o));op.value=String(o.id);sel.append(op);});
+  if(prev&&fs.some(o=>String(o.id)===prev))sel.value=prev;
+  refreshFromKind();
+}
+function refreshFromKind(){
+  const o=byId(+$('#fromFig').value),ks=$('#fromKind'),pk=ks.value;ks.textContent='';
+  const kinds=!o?[]:o.type==='polygon'?[['gprism','призма'],['gpyramid','пирамида']]:[['cylinder','цилиндър'],['cone','конус']];
+  kinds.forEach(([v,t])=>{const op=el('option',null,t);op.value=v;ks.append(op);});if(kinds.some(k=>k[0]===pk))ks.value=pk;
+  const ap=$('#fromApex');ap.textContent='';
+  if(o&&o.type==='polygon'){
+    const opts=[['c','центъра на тежестта']];if(o.pts.length===3){opts.push(['O','центъра O на описаната окръжност']);opts.push(['I','центъра I на вписаната окръжност']);}
+    o.pts.forEach((id,i)=>opts.push(['v'+i,'върха '+nm(id)]));opts.forEach(([v,t])=>{const op=el('option',null,t);op.value=v;ap.append(op);});
+  }
+  $('#fromApexL').hidden=ks.value!=='gpyramid';
+}
+function buildFrom(){
+  const o=byId(+$('#fromFig').value);if(!o){say('Първо начертай многоъгълник или окръжност в „Равнина (2D)“.','err');return;}
+  const h=parseFloat($('#fromH').value.replace(',','.').replace('−','-'));if(!(h>0)){say('Височината трябва да е положително число.','err');return;}
+  const kind=$('#fromKind').value;
+  if(o.type==='polygon'){
+    let pts=o.pts.map(P).map(q=>[q.x,q.y]),names=o.pts.map(nm);
+    if(pts.some(q=>!q.every(isFinite))){say('Фигурата не е определена.','err');return;}
+    const A=signedArea2(pts);if(Math.abs(A)<1e-9){say('Многоъгълникът няма лице.','err');return;}
+    if(A<0){pts.reverse();names.reverse();}
+    const base={pts,names,S:Math.abs(A)/2},body={type:'body',kind,pos:{x:0,y:0,z:0},base,from:o.id};
+    if(kind==='gprism'){body.p={h,dx:0,dy:0};body.name='Призма '+names.join('')+names.map(n=>n+'₁').join('');}
+    else{
+      const ap=$('#fromApex').value;let q;
+      if(ap==='O'||ap==='I'){const [a,b,c]=o.pts.map(P);const C=circleOf({type:ap==='O'?'circ3':'incircle',a:o.pts[0],b:o.pts[1],c:o.pts[2]});q=C?[C.x,C.y]:null;}
+      else if(ap&&ap[0]==='v'){const v=P(o.pts[+ap.slice(1)]);q=[v.x,v.y];}
+      if(!q){const n=pts.length;q=[pts.reduce((s,p)=>s+p[0],0)/n,pts.reduce((s,p)=>s+p[1],0)/n];}
+      body.p={h,qx:q[0],qy:q[1]};body.name='Пирамида '+names.join('')+'Q';
+    }
+    body.baseSrc=baseStr(body);addObj3(body);
+  } else {
+    const C=circleOf(o);if(!C){say('Окръжността не е определена.','err');return;}
+    addObj3({type:'body',kind,p:{r:Math.round(C.r*1000)/1000,h},pos:{x:C.x,y:C.y,z:0},name:(kind==='cone'?'Конус':'Цилиндър')+' с основа '+o.name,from:o.id});
+  }
+  changed();say('Построих тялото върху фигурата от равнината.','ok');
+}
 function namesToRefs(str){
-  const parts=str.match(/[A-Z][0-9₁']*/g);if(!parts||parts.join('')!==str)return null;
-  const norm=t=>t.replace(/₁/g,'1');const refs=[];
+  const parts=str.match(/[A-Z](?:_?[0-9₀-₉]+)?'*/g);if(!parts||parts.join('')!==str)return null;
+  const norm=normName;const refs=[];
   for(const p of parts){
     const o=st.o3.find(x=>isPt3(x)&&norm(x.name)===norm(p));if(o){refs.push(o.id);continue;}
     let found=null;for(const b of st.o3){if(b.type!=='body')continue;const M=bodyMesh(b);if(!M.labels)continue;const i=M.labels.findIndex(t=>norm(t)===norm(p));if(i>=0){found='v:'+b.id+':'+i;break;}}
@@ -2303,7 +2441,21 @@ function render3D(T){
       labels.push({x:S[0],y:S[1],ox:9,oy:-9,t:o.name,point:true,owner:o,key:'p'});
     }
   }
-  flushTag();
+  flushTag();tagO=null;
+  if(st.opt.show2d)for(const o of st.o2){
+    if(!o.visible||st.o3.some(b=>b.from===o.id))continue;
+    let pts=null,lab=null;
+    if(o.type==='polygon'){pts=o.pts.map(P).map(q=>[q.x,q.y,0]);lab=o.pts.map(nm);}
+    else if(isCircle(o)){const C=circleOf(o);if(!C)continue;pts=[];for(let k=0;k<72;k++){const t=2*Math.PI*k/72;pts.push([C.x+C.r*Math.cos(t),C.y+C.r*Math.sin(t),0]);}}
+    else if(o.type==='segment'){const a=P(o.a),b=P(o.b);if(!isFinite(a.x)||!isFinite(b.x))continue;const A=pr([a.x,a.y,0]),B=pr([b.x,b.y,0]);items.push({k:'line',d:Math.min(A[2],B[2]),a:A,b:B,color:o.color,lw:2});continue;}
+    else continue;
+    if(pts.some(q=>!q.every(isFinite)))continue;
+    const pp=pts.map(pr),dd=pp.reduce((s,q)=>s+q[2],0)/pp.length;
+    items.push({k:'poly',d:dd,pts:pp,fill:rgba(o.color,fillA(o,0.22))});
+    for(let i=0;i<pp.length;i++){const A=pp[i],B=pp[(i+1)%pp.length];items.push({k:'line',d:Math.min(A[2],B[2])-1e-3,a:A,b:B,color:o.color,lw:2.2});}
+    if(lab){const cx=pp.reduce((s,q)=>s+q[0],0)/pp.length,cy=pp.reduce((s,q)=>s+q[1],0)/pp.length;
+      pp.forEach((q,i)=>{const dx=q[0]-cx,dy=q[1]-cy,l=Math.hypot(dx,dy)||1;items.push({k:'pt',d:q[2]-0.05,x:q[0],y:q[1],r:4,color:o.color});labels.push({x:q[0],y:q[1],ox:dx/l*13,oy:dy/l*13,t:lab[i]});});}
+  }
   items.sort((a,b)=>b.d-a.d);
   for(const it of items){ctx.globalAlpha=it.ga==null?1:it.ga;
     if(it.k==='poly'){
@@ -2342,6 +2494,7 @@ function render3D(T){
     ctx.globalAlpha=1;
     if(l.owner){ctx.font=lf;st.labels3.push({x:px,y:py,w:ctx.measureText(l.t).width,h:sz,bx:l.x,by:l.y,owner:l.owner,key:l.key});}
   }
+  for(const r of st.pending){const q=ptOf(r);if(q&&q.every(isFinite)){const S=pr(q);ctx.beginPath();ctx.arc(S[0],S[1],10,0,2*Math.PI);ctx.strokeStyle=T.accent;ctx.lineWidth=2.2;ctx.stroke();}}
 }
 
 /* ================= BOARD (ink) ================= */
@@ -2360,8 +2513,9 @@ const BOARD_UI=[
   {tool:'eraser',name:'Гума',icon:'<path d="M8 20h12M5.5 14.5l8-8a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L12 18H8z"/><path d="M9.5 10.5l5 5"/>'},
   {name:'Вмъкни изображение (или постави с Ctrl+V)',act:()=>fileIn.click(),icon:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.8"/><path d="M21 16l-5-5-9 8"/>'},
   {sep:true},
-  {name:'Отмени последното рисуване',act:()=>undoInk(),icon:'<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>'},
-  {name:'Изтрий всички рисунки и изображения',act:()=>clearInk(),icon:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'},
+  {name:'Отмени последното действие (Ctrl+Z)',act:()=>undoAll(),icon:'<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>'},
+  {name:'Върни отмененото (Ctrl+Y)',act:()=>redoAll(),icon:'<path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>'},
+  {name:'Изтрий всичко на тази страница',act:e=>clearPage(e.currentTarget),icon:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'},
   {sep:true},
   {name:'Запази всички страници като PDF',act:()=>exportPdf(),icon:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M12 10v7M9 14l3 3 3-3"/>'},
   {name:'Печат на всички страници',act:()=>printAll(),icon:'<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>'}
@@ -2371,6 +2525,46 @@ const toInk=(sx,sy)=>st.mode==='2d'?s2w(sx,sy):[sx,sy];
 const fromInk=p=>st.mode==='2d'?w2s(p[0],p[1]):p;
 const inkColor=(c,T)=>c==='ink'?T.ink:c;
 function snapshot(){const h=st.hist[st.mode];h.push(st.ink[st.mode].slice());if(h.length>100)h.shift();}
+function pageState(){
+  return JSON.stringify({o2:st.o2,o3:st.o3,sliders:st.sliders,ink:st.ink},(k,v)=>{if(typeof v==='function'||k==='ui'||k==='_anc')return undefined;if(k==='img')return v?v.src:undefined;return v;});
+}
+function recordState(){
+  if(st.restoring||st.exporting||!st.undo)return;let s;try{s=pageState();}catch(e){return;}
+  const u=st.undo;if(u.last===s)return;
+  if(u.last!=null){u.stack.push(u.last);if(u.stack.length>60)u.stack.shift();u.redo=[];}
+  u.last=s;
+}
+let undoT=0;
+function scheduleUndo(){clearTimeout(undoT);undoT=setTimeout(recordState,350);}
+function applyState(str){
+  const d=JSON.parse(str);st.restoring=true;
+  try{
+    d.o2=(d.o2||[]).filter(o=>rehydrate(o,'2d'));d.o3=(d.o3||[]).filter(o=>rehydrate(o,'3d'));
+    d.ink=d.ink||{'2d':[],'3d':[]};['2d','3d'].forEach(m=>(d.ink[m]=d.ink[m]||[]).forEach(s=>{if(s.kind==='image'&&typeof s.img==='string'){const im=new Image();im.onload=render;im.src=s.img;s.img=im;}}));
+    st.o2=d.o2;st.o3=d.o3;st.ink=d.ink;st.sliders=(d.sliders||[]).map(sl=>Object.assign(sl,{playing:false}));
+    for(const k of Object.keys(ENV))delete ENV[k];st.sliders.forEach(sl=>{ENV[sl.name]=sl.value;});
+    st.pending=[];st.selImg=null;st.undo.last=str;
+    renderList();render();
+  }finally{st.restoring=false;}
+}
+function undoAll(){
+  clearTimeout(undoT);recordState();const u=st.undo;
+  if(!u.stack.length){say('Няма какво да се отмени.','err');return;}
+  u.redo.push(u.last);applyState(u.stack.pop());say('Отмених последното действие.','ok');
+}
+function redoAll(){
+  clearTimeout(undoT);recordState();const u=st.undo;
+  if(!u.redo.length){say('Няма какво да се върне.','err');return;}
+  u.stack.push(u.last);applyState(u.redo.pop());say('Върнах действието.','ok');
+}
+function clearPage(btn){
+  if(btn&&!btn.classList.contains('warn')){btn.classList.add('warn');say('Докосни кошчето още веднъж, за да изтриеш всичко на тази страница. После може да го върнеш с ↶.','err');
+    clearTimeout(btn._t);btn._t=setTimeout(()=>btn.classList.remove('warn'),3000);return;}
+  if(btn)btn.classList.remove('warn');
+  clearTimeout(undoT);recordState();
+  st.o2=[];st.o3=[];st.sliders=[];st.ink={'2d':[],'3d':[]};for(const k of Object.keys(ENV))delete ENV[k];st.pending=[];st.selImg=null;
+  changed();say('Страницата е изчистена. С ↶ може да я върнеш.','ok');
+}
 function undoInk(){const h=st.hist[st.mode];if(h.length){st.ink[st.mode]=h.pop();render();}else say('Няма какво да се отмени.','err');}
 function clearInk(){if(!st.ink[st.mode].length)return;snapshot();st.ink[st.mode]=[];render();say('Изтрих рисунките. Бутонът „Отмени“ ги връща.','ok');}
 function distSeg(px,py,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],l2=dx*dx+dy*dy;let t=l2?((px-a[0])*dx+(py-a[1])*dy)/l2:0;t=Math.max(0,Math.min(1,t));return Math.hypot(a[0]+t*dx-px,a[1]+t*dy-py);}
@@ -2648,9 +2842,9 @@ function printAll(){
 }
 
 /* ---------- pages ---------- */
-const PAGE_KEYS=['mode','o2','o3','ink','hist','sliders','v2','v3'];
+const PAGE_KEYS=['mode','o2','o3','ink','hist','sliders','v2','v3','undo'];
 const pages=[{}];let curPage=0;
-function blankPage(mode){return {mode,o2:[],o3:[],ink:{'2d':[],'3d':[]},hist:{'2d':[],'3d':[]},sliders:[],v2:{cx:0,cy:0,scale:50},v3:{yaw:-1.9,pitch:0.42,zoom:1}};}
+function blankPage(mode){return {mode,o2:[],o3:[],ink:{'2d':[],'3d':[]},hist:{'2d':[],'3d':[]},undo:{stack:[],last:null,redo:[]},sliders:[],v2:{cx:0,cy:0,scale:50},v3:{yaw:-1.9,pitch:0.42,zoom:1}};}
 const cloneInk=s=>Object.assign({},s,{pts:s.pts.map(q=>q.slice())});
 function savePage(){const p={};PAGE_KEYS.forEach(k=>p[k]=st[k]);pages[curPage]=p;}
 function applyPage(i){
@@ -2668,7 +2862,7 @@ function addPage(copy){
   if(copy){const c=pages[curPage];
     p={mode:c.mode,o2:c.o2.map(o=>Object.assign({},o)),
       o3:c.o3.map(o=>Object.assign({},o,o.p?{p:Object.assign({},o.p)}:{},o.pos?{pos:Object.assign({},o.pos)}:{})),
-      ink:{'2d':c.ink['2d'].map(cloneInk),'3d':c.ink['3d'].map(cloneInk)},hist:{'2d':[],'3d':[]},
+      ink:{'2d':c.ink['2d'].map(cloneInk),'3d':c.ink['3d'].map(cloneInk)},hist:{'2d':[],'3d':[]},undo:{stack:[],last:null,redo:[]},
       sliders:c.sliders.map(sl=>Object.assign({},sl,{playing:false,ui:null})),v2:Object.assign({},c.v2),v3:Object.assign({},c.v3)};}
   else p=blankPage(st.mode);
   pages.splice(curPage+1,0,p);applyPage(curPage+1);setMode(st.mode);updatePageBar();
@@ -2691,6 +2885,7 @@ function draw(){
   ctx.globalAlpha=1;
   try{drawInk(T);}catch(e){console.error(e);}
   if(typeof scheduleSave==='function')scheduleSave();
+  if(typeof scheduleUndo==='function')scheduleUndo();
   $('#quick').hidden=!(st.mode==='2d'&&st.tool==='tangpoly'&&st.pending.length===1);
   updateReadouts();
 }
@@ -2698,6 +2893,24 @@ function draw(){
 /* ---------- list ---------- */
 const PT3N=['point3','pt3c'];
 const NAMEPREFIX=['segment','line','perp','par','ftan','ctan','bisect','implicit','vline','angle','polygon','tangpoly'];
+const SUBS='₀₁₂₃₄₅₆₇₈₉';
+const sub1=t=>toSub(t);
+function applyRename(o,raw){
+  const v=toSub(String(raw).trim().replace(/\s+/g,' '));const isP=isPt(o)||PT3N.includes(o.type);
+  if(!v){if(isP||['func','circle','circ3','incircle','plane','plane3','line3','body'].includes(o.type))return 'Този обект трябва да има име.';
+    delete o.named;if(o.type!=='polygon')delete o.name;else o.name=o.pts.map(nm).join('');return null;}
+  if(isP){const pool=st.mode==='2d'?st.o2.filter(isPt):st.o3.filter(x=>PT3N.includes(x.type));if(pool.some(x=>x!==o&&normName(x.name)===normName(v)))return 'Вече има точка с име '+v+'.';}
+  if(o.type==='func'&&st.o2.some(x=>x!==o&&x.type==='func'&&x.name===v))return 'Вече има функция '+v+'.';
+  o.name=v;o.named=true;return null;
+}
+function inlineRename(sx,sy,cur,apply){
+  const old=document.querySelector('.inktext.rn');if(old)old.remove();
+  const inp=el('input','inktext rn');inp.type='text';inp.value=cur;inp.style.left=(sx-30)+'px';inp.style.top=(sy-16)+'px';inp.style.fontSize='17px';inp.style.width='90px';inp.style.color='var(--ink)';inp.setAttribute('aria-label','Ново име');
+  $('#stage').append(inp);setTimeout(()=>{inp.focus();inp.select();},0);let done=false;
+  const commit=ok=>{if(done)return;done=true;const v=inp.value;inp.remove();if(!ok||v===cur)return;const err=apply(v);if(err)say(err,'err');else{changed();say('Новото име е запазено.','ok');}};
+  inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();commit(true);}else if(e.key==='Escape')commit(false);});
+  inp.addEventListener('blur',()=>commit(true));
+}
 function describe(o){const t=describe0(o);return o.named&&NAMEPREFIX.includes(o.type)?o.name+': '+t:t;}
 function describe0(o){
   switch(o.type){
@@ -2783,8 +2996,9 @@ function renderList(){
   const ul=$('#list');ul.textContent='';
   const objs=st.mode==='2d'?st.o2:st.o3;
   if(st.sliders.length){ul.append(secHead('Параметри'));st.sliders.forEach(s=>ul.append(sliderItem(s)));}
-  if(objs.length){ul.append(secHead('Обекти'));objs.forEach(o=>ul.append(objItem(o)));}
-  if(st.mode==='3d')refreshCons();
+  if(objs.length){ul.append(secHead('Обекти'));
+    if(objs.some(o=>!o.visible)){const li=el('li');const b=el('button','ghost','Покажи скритите ('+objs.filter(o=>!o.visible).length+')');b.type='button';b.style.margin='2px 0 6px';b.onclick=()=>{objs.forEach(o=>o.visible=true);changed();};li.append(b);ul.append(li);}objs.forEach(o=>ul.append(objItem(o)));}
+  if(st.mode==='3d'){refreshCons();refreshFrom();}
   if(!objs.length&&!st.sliders.length){
     ul.append(el('li','empty',st.mode==='2d'?'Чертежът е празен. Въведи уравнение отгоре или избери инструмент над чертежа.':'Пространството е празно. Добави тяло, равнина или повърхнина.'));
   }
@@ -2797,6 +3011,8 @@ function objItem(o){
   dot.onclick=()=>{o.visible=!o.visible;li.classList.toggle('off',!o.visible);setEye();render();};
   const desc=el('div','desc');
   if(o.type==='body'){desc.append(el('strong',null,o.name));}else{desc.dataset.id=o.id;setRich(desc,describe(o));}
+  desc.style.cursor='pointer';desc.title='Докосни, за да смениш името, цвета или вида';
+  desc.addEventListener('click',()=>{if(cpal.hidden)cpal.hidden=false;const ni=li._nameInput;if(ni){ni.focus();try{ni.select();}catch(e){}}});
   const del=el('button','del','×');del.type='button';del.setAttribute('aria-label','Изтрий');
   del.onclick=()=>{if(st.mode==='2d')deleteObj2(o.id);else deleteObj3(o.id);changed();};
   const cb=el('button','cbtn');cb.type='button';cb.title='Цвят';cb.setAttribute('aria-label','Смени цвета');
@@ -2818,19 +3034,20 @@ function objItem(o){
     cpal.append(row);}
   if(o.type!=='vec'&&o.type!=='vexpr'){
     const nr=el('label','namerow');nr.append(el('span',null,'Име'));const ni=el('input');ni.type='text';ni.value=o.name&&(o.named||isPt(o)||PT3N.includes(o.type)||['func','circle','circ3','incircle','plane','plane3','line3','body'].includes(o.type))?o.name:'';
-    ni.placeholder=isPt(o)||PT3N.includes(o.type)?'напр. M':'напр. a';ni.maxLength=24;ni.spellcheck=false;
+    ni.placeholder=isPt(o)||PT3N.includes(o.type)?'напр. M или A1 (индекс)':'напр. a';ni.maxLength=24;ni.spellcheck=false;
     ni.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ni.blur();}};
-    ni.onchange=()=>{
-      const v=ni.value.trim().replace(/\s+/g,' ');const isP=isPt(o)||PT3N.includes(o.type);
-      if(!v){if(isP||['func','circle','circ3','incircle','plane','plane3','line3','body'].includes(o.type)){ni.value=o.name;say('Този обект трябва да има име.','err');return;}delete o.named;if(o.type!=='polygon')delete o.name;else o.name=o.pts.map(nm).join('');}
-      else{
-        if(isP){const pool=st.mode==='2d'?st.o2.filter(isPt):st.o3.filter(x=>PT3N.includes(x.type));if(pool.some(x=>x!==o&&x.name===v)){ni.value=o.name;say('Вече има точка с име '+v+'.','err');return;}}
-        if(o.type==='func'&&st.o2.some(x=>x!==o&&x.type==='func'&&x.name===v)){ni.value=o.name;say('Вече има функция '+v+'.','err');return;}
-        o.name=v;o.named=true;
-      }
-      renderList();render();say('Новото име е запазено.','ok');
-    };
-    nr.append(ni);cpal.append(nr);
+    ni.onchange=()=>{const err=applyRename(o,ni.value);if(err){ni.value=o.name||'';say(err,'err');return;}renderList();render();say('Новото име е запазено.','ok');};
+    nr.append(ni);cpal.append(nr);li._nameInput=ni;
+    if(o.type==='body'){const M0=bodyMesh(o);if(M0.labels){
+      const vr=el('label','namerow');vr.append(el('span',null,'Върхове'));const vi=el('input');vi.type='text';vi.spellcheck=false;vi.value=M0.labels.join(' ');
+      vi.title='Имената на върховете, разделени с интервал, напр. A B C D A1 B1 C1 D1';
+      vi.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();vi.blur();}};
+      vi.onchange=()=>{const parts=vi.value.trim().split(/[\s,;]+/).filter(Boolean).map(sub1);
+        if(parts.length!==M0.labels.length){say('Трябват точно '+M0.labels.length+' имена, разделени с интервал.','err');vi.value=bodyMesh(o).labels.join(' ');return;}
+        if(new Set(parts).size!==parts.length){say('Имената на върховете трябва да са различни.','err');vi.value=bodyMesh(o).labels.join(' ');return;}
+        o.vlab=parts;if(o.base){const n=o.base.names.length;o.base.names=parts.slice(0,n);o.baseSrc=baseStr(o);}
+        renderList();render();say('Върховете са преименувани.','ok');};
+      vr.append(vi);cpal.append(vr);}}
   }
   if(o.type==='plane'||o.type==='plane3'){const sl=el('label','dsh');const sc=el('input');sc.type='checkbox';sc.checked=o.secOnly!=null?o.secOnly:st.opt.secOnly;sc.onchange=()=>{o.secOnly=sc.checked;render();};sl.append(sc,el('span',null,'Само сечението (без цялата равнина)'));cpal.append(sl);}
   if(o.type==='interval'){const hl=el('label','oprow');hl.append(el('span',null,'Вид'));const hs=el('select');hs.style.cssText='font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink)';
@@ -2911,7 +3128,7 @@ const HELP={
 function setMode(m){
   st.mode=m;st.pending=[];st.hover=null;
   $('#tab2d').setAttribute('aria-selected',m==='2d');$('#tab3d').setAttribute('aria-selected',m==='3d');
-  if(m==='3d'&&!isBoard(st.tool)&&!TOOL3[st.tool])st.tool='move';if(m==='2d'&&!isBoard(st.tool)&&!TOOL[st.tool])st.tool='move';buildToolbar();document.querySelectorAll('.bt[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===st.tool));$('#bodiesSec').hidden=m!=='3d';$('#intSec').hidden=m!=='2d';$('#imSec').hidden=m!=='2d';$('#consSec').hidden=m!=='3d';$('#opts2d').hidden=m!=='2d';$('#opts3d').hidden=m!=='3d';
+  if(m==='3d'&&!isBoard(st.tool)&&!TOOL3[st.tool])st.tool='move';if(m==='2d'&&!isBoard(st.tool)&&!TOOL[st.tool])st.tool='move';buildToolbar();document.querySelectorAll('.bt[data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===st.tool));$('#bodiesSec').hidden=m!=='3d';$('#intSec').hidden=m!=='2d';$('#imSec').hidden=m!=='2d';$('#consSec').hidden=m!=='3d';$('#fromSec').hidden=m!=='3d';$('#opts2d').hidden=m!=='2d';$('#opts3d').hidden=m!=='3d';
   $('#cmd').placeholder=m==='2d'?'напр. y = 2x + 1':'напр. x + y + z = 4';
   $('#helpText').textContent=HELP[m];
   const ex=$('#examples');ex.textContent='';
@@ -2931,6 +3148,7 @@ document.querySelectorAll('.modes button').forEach(b=>b.onclick=()=>setMode(b.da
 document.querySelectorAll('[data-opt]').forEach(c=>c.onchange=()=>{st.opt[c.dataset.opt]=c.checked;render();});
 Object.entries(BODY_DEFS).forEach(([k,d])=>{const b=el('button');b.type='button';b.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+BODY_ICONS[k]+'</svg>';b.append(el('span',null,d.name));b.onclick=()=>addBody(k);$('#bodies').append(b);});
 $('#pdfBtn').onclick=()=>exportPdf();
+$('#fromFig').onchange=refreshFromKind;$('#fromKind').onchange=refreshFromKind;$('#fromGo').onclick=buildFrom;
 $('#imFind').onclick=()=>{
   try{const F=imParseIneq($('#imExpr').value);if(!$('#imExpr').value.trim())throw userErr('Първо въведи неравенството.');
     const xs=imFindPoints(F.f);$('#imPts').value=xs.map(niceNum).join('; ');say(xs.length?'Намерих '+xs.length+' точки. Може да ги поправиш, ако трябва.':'Не намерих точки, в които изразът е 0 или не съществува.',xs.length?'ok':'err');}
@@ -3017,6 +3235,7 @@ if(!document.fullscreenEnabled)fsBtn.hidden=true;
 else fsBtn.onclick=()=>{if(document.fullscreenElement)document.exitFullscreen();else document.documentElement.requestFullscreen().catch(()=>say('Браузърът не позволи цял екран тук. Отвори файла директно.','err'));};
 document.addEventListener('keydown',e=>{
   const ae=document.activeElement,typing=ae&&/INPUT|TEXTAREA/.test(ae.tagName);
+  if(!typing&&(e.ctrlKey||e.metaKey)&&(e.key==='z'||e.key==='Z'||e.key==='y'||e.key==='Y')){e.preventDefault();if(e.key.toLowerCase()==='y'||e.shiftKey)redoAll();else undoAll();return;}
   if(!typing&&(e.key==='PageDown'||e.key==='PageUp')){e.preventDefault();goPage(curPage+(e.key==='PageDown'?1:-1));return;}
   if((e.key==='Delete'||e.key==='Backspace')&&st.selImg&&!typing){const a=st.ink[st.mode],i=a.indexOf(st.selImg);if(i>=0){snapshot();a.splice(i,1);}st.selImg=null;e.preventDefault();render();return;}if(e.key==='Escape'&&st.pending.length){st.pending=[];render();}});
 
@@ -3062,7 +3281,7 @@ cv.addEventListener('pointerdown',e=>{
     if(hp){drag={kind:'p3',o:hp,sy};cv.style.cursor='grabbing';return;}
     const hv=['move','pt3','lift'].includes(st.tool)?hitVertex(sx,sy):null;
     if(hv){drag={kind:'vtx',b:hv.b,i:hv.i,sy,conv:false};cv.style.cursor='grabbing';return;}
-    drag={kind:'rot',sx,sy,yaw:st.v3.yaw,pitch:st.v3.pitch,tap:st.tool==='pt3'};cv.style.cursor='grabbing';
+    drag={kind:'rot',sx,sy,yaw:st.v3.yaw,pitch:st.v3.pitch,tap:['pt3','seg3','ln3','pl3','hide'].includes(st.tool)};cv.style.cursor='grabbing';
   }
 });
 cv.addEventListener('pointermove',e=>{
@@ -3112,7 +3331,7 @@ function endPtr(e){
   if(drag&&drag.kind==='ink'&&drag.s.kind==='smart'){if(e.type==='pointerup')finishSmart(drag.s);else drag.s.kind='pen';}
   if(drag&&drag.kind==='text'&&down&&!down.moved&&e.type==='pointerup')openText(down.sx,down.sy);
   if(drag&&drag.kind==='erase'&&!drag.erased)st.hist[st.mode].pop();
-  if(drag&&drag.kind==='rot'&&drag.tap&&down&&!down.moved&&e.type==='pointerup')placePt3(down.sx,down.sy);
+  if(drag&&drag.kind==='rot'&&drag.tap&&down&&!down.moved&&e.type==='pointerup')tap3(down.sx,down.sy);
   if(drag&&(drag.kind==='p3'||(drag.kind==='vtx'&&drag.conv)))renderList();
   if(drag&&down&&!down.moved&&st.mode==='2d'&&st.tool==='move'&&(drag.kind==='pan'||drag.kind==='point')&&e.type==='pointerup')toggleDot(down.sx,down.sy);
   if(drag&&down&&!down.moved&&st.mode==='2d'&&st.tool!=='move'&&!isBoard(st.tool)&&e.type==='pointerup')onToolTap(down.sx,down.sy);
@@ -3122,6 +3341,19 @@ function endPtr(e){
 }
 cv.addEventListener('pointerup',endPtr);
 cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('dblclick',e=>{
+  const [sx,sy]=local(e);
+  if(st.mode==='2d'){
+    const l=(st.labels2||[]).find(r=>sx>=r.x0-4&&sx<=r.x1+4&&sy>=r.y0-4&&sy<=r.y1+4);const id=l?l.id:hitPoint(sx,sy,false);
+    if(id){const o=byId(id);inlineRename(sx,sy,o.name,v=>applyRename(o,v));return;}
+    const lid=hitLine(sx,sy)||hitCircle(sx,sy)||hitFunc(sx,sy);if(lid){const o=byId(lid);if(o.type==='polygon')return;inlineRename(sx,sy,o.named||o.type==='func'||isCircle(o)?o.name:'',v=>applyRename(o,v));}
+  } else {
+    const l=(st.labels3||[]).find(r=>Math.abs(sx-r.x)<=r.w/2+5&&Math.abs(sy-r.y)<=r.h/2+4);
+    if(!l)return;const ow=l.owner;
+    if(ow.type==='body'){const M=bodyMesh(ow),i=l.key;inlineRename(sx,sy,M.labels[i],v=>{const t=sub1(v.trim());if(!t)return 'Името не може да е празно.';const labs=M.labels.slice();if(labs.some((x,j)=>j!==i&&x===t))return 'Вече има връх '+t+'.';labs[i]=t;ow.vlab=labs;if(ow.base){ow.base.names=labs.slice(0,ow.base.names.length);ow.baseSrc=baseStr(ow);}return null;});}
+    else inlineRename(sx,sy,ow.name,v=>applyRename(ow,v));
+  }
+});
 $('#stage').addEventListener('contextmenu',e=>{if(!/INPUT|TEXTAREA/.test(e.target.tagName))e.preventDefault();});
 cv.addEventListener('pointercancel',endPtr);
 cv.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'){st.hover=null;$('#coords').textContent='';render();}});
@@ -3137,6 +3369,7 @@ const GUIDE2={
   line:['Избери първата точка от правата.','После избери втората. Правата минава през тях, а в списъка вляво е уравнението ѝ y = kx + n.'],
   circle:['Първо избери центъра на окръжността.','После избери точка от окръжността. Радиусът е разстоянието между двете точки.'],
   polygon:['Докосвай върховете един след друг.','Накрая докосни отново първия връх, за да затвориш многоъгълника. Лицето и периметърът са в списъка.'],
+  hide:['Докосни обект на чертежа и той се скрива, без да се изтрива. Построеното от него продължава да работи.','Скритите обекти се връщат с окото в списъка или с бутона „Покажи скритите“ над списъка.'],
   mid:['Избери двата края на отсечката. Средата ѝ се появява като нова точка.'],
   perp:['Първо докосни правата или отсечката.','После избери точката, през която да мине перпендикулярът.'],
   par:['Първо докосни правата или отсечката.','После избери точката, през която да мине успоредната права.'],
@@ -3154,6 +3387,10 @@ const GUIDE2={
 const GUIDE3={
   move:['Влачи празно място, за да завъртиш тялото. С колелцето или с два пръста го приближаваш.','Влачи точка, за да я преместиш по нейния ръб или стена. Хвани буква, за да я преместиш, ако пречи.','Хвани връх на тяло и го влачи. При правилните тела основата остава правилна: връх от основата променя основния ръб, а горен връх или върхът на пирамидата променя височината. Върховете на телата с произволна основа се местят свободно.'],
   pt3:['Докосни ръб, стена, права или равнина и точката застава върху тях.','Ако докоснеш празно място, точката отива в основната равнина. С „Височина“ после я вдигаш или сваляш.'],
+  hide:['Докосни тяло, равнина, права или точка и тя се скрива. Скритите обекти се връщат с окото в списъка или с бутона „Покажи скритите“.'],
+  seg3:['Докосни първата точка: връх, построена точка или ново място върху ръб или стена.','Докосни втората точка. Ако докоснеш празно място, там се поставя нова точка и отсечката стига до нея.'],
+  ln3:['Докосни две точки, през които да мине правата.'],
+  pl3:['Докосни три точки, през които да мине равнината. Избраните точки се оцветяват с кръгче.'],
   lift:['Хвани свободна точка и я влачи нагоре или надолу.','Хвани горен връх на призма или върха на пирамида, за да промениш височината ѝ.']
 };
 const GUIDEB={
@@ -3173,6 +3410,7 @@ const TASKS=[
   {id:'perp3',title:'перпендикуляр към равнина',mode:'3d',steps:['Построй равнина през три точки, например като напишеш ABC при куба.','В „Построения“ избери „Перпендикуляр от точка към равнина“, после точката и равнината.','Петата на перпендикуляра се означава с H, а в списъка е разстоянието до равнината.']},
   {id:'vectors',title:'вектори',mode:'2d',steps:['Създай точки, например A(0; 0), B(3; 1) и C(1; 3).','С инструмента „Вектор“ избери начало и край или просто напиши AB.','Напиши AB + AC или 2AB − AC, за да видиш сбор, разлика и умножение с число.']},
   {id:'imethod',title:'метод на интервалите',mode:'2d',steps:['В раздела „Метод на интервалите“ напиши неравенството, напр. (x − 1)(x + 2)/(x − 4) ≥ 0.','Натисни „Намери точките“. В полето се появяват нулите и точките, в които изразът не съществува. Може да ги поправиш.','Натисни „Раздели оста“. Появяват се интервалите, знаците, змийката и отговорът, оцветен върху оста.']},
+  {id:'from2d',title:'тяло от фигура в равнината',steps:['В „Равнина (2D)“ начертай многоъгълник или окръжност, напр. триъгълник ABC.','Премини в „Пространство (3D)“. Фигурата се вижда в основата.','В раздела „Тяло от фигура в равнината“ избери фигурата, вида на тялото и височината. При пирамида избери и над коя точка е върхът ѝ, напр. над центъра O на описаната окръжност.']},
   {id:'board',title:'дъска и страници',steps:['От лентата вляво на дъската избери писалка, маркер или умна писалка.','С бутоните долу в средата добавяш страници или копираш текущата. Така показваш решението стъпка по стъпка.','„Запази PDF“ и „Печат“ включват всички страници.']}
 ];
 const geo={open:false,mode:'tool',task:null,step:0};
@@ -3253,7 +3491,7 @@ function restoreSave(data){
     p.o2=(p.o2||[]).filter(o=>rehydrate(o,'2d'));p.o3=(p.o3||[]).filter(o=>rehydrate(o,'3d'));
     p.ink=p.ink||{'2d':[],'3d':[]};['2d','3d'].forEach(m=>{p.ink[m]=(p.ink[m]||[]).filter(s=>s.kind!=='image'||typeof s.img==='string');
       p.ink[m].forEach(s=>{if(s.kind==='image'){const im=new Image();im.onload=render;im.src=s.img;s.img=im;}});});
-    p.hist={'2d':[],'3d':[]};p.sliders=(p.sliders||[]).map(sl=>Object.assign(sl,{playing:false}));
+    p.hist={'2d':[],'3d':[]};p.undo={stack:[],last:null,redo:[]};p.sliders=(p.sliders||[]).map(sl=>Object.assign(sl,{playing:false}));
     pages.push(p);
   });
   let mx=0;pages.forEach(p=>[...p.o2,...p.o3].forEach(o=>{if(o.id>mx)mx=o.id;}));uid=mx+1;
