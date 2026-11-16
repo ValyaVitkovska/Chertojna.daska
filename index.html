@@ -1928,6 +1928,24 @@ function clipLine(p,u,L){
   if(!(t0<t1))return null;
   return [add3(p,mul3(u,t0)),add3(p,mul3(u,t1))];
 }
+function segSection(o,pl){
+  const n=pl.n,nl=len3(n),pts=[],add=q=>{if(q&&q.every(isFinite)&&!pts.some(r=>len3(sub3(r,q))<1e-7))pts.push(q);},sd=q=>(dot3(n,q)-pl.d)/nl;
+  if(o.type==='plane3'&&o.kind==='ppp')o.refs.forEach(r=>add(ptOf(r)));
+  for(const s of st.o3){
+    if(!s.visible)continue;
+    if(s.type==='line3'&&s.kind==='seg'){const A=ptOf(s.refs[0]),B=ptOf(s.refs[1]);if(!A||!B)continue;const a=sd(A),b=sd(B);
+      if(Math.abs(a)<1e-7)add(A);if(Math.abs(b)<1e-7)add(B);if(a*b<0)add(lerp3(A,B,a/(a-b)));}
+    else if(s.type==='point3'||s.type==='pt3c'){const q=s.type==='point3'?[s.x,s.y,s.z]:cpt3(s);if(q&&q.every(isFinite)&&Math.abs(sd(q))<1e-7)add(q);}
+  }
+  if(pts.length<3)return null;
+  const nh=mul3(n,1/nl),ref=Math.abs(nh[2])<0.9?[0,0,1]:[1,0,0],cu=cross3(nh,ref),u=mul3(cu,1/len3(cu)),v=cross3(nh,u);
+  const P2=pts.map(q=>({q,x:dot3(q,u),y:dot3(q,v)})).sort((a,b)=>a.x-b.x||a.y-b.y);
+  const cr=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x),lo=[],up=[];
+  for(const p of P2){while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],p)<=1e-12)lo.pop();lo.push(p);}
+  for(let i=P2.length-1;i>=0;i--){const p=P2[i];while(up.length>=2&&cr(up[up.length-2],up[up.length-1],p)<=1e-12)up.pop();up.push(p);}
+  const h=lo.slice(0,-1).concat(up.slice(0,-1)).map(p=>p.q);
+  return h.length>=3&&area3(h)>1e-9?h:null;
+}
 function secEdgeVisible(b,m){
   if(b.kind==='sphere'){const C=[b.pos.x,b.pos.y,b.pos.z];return rot(sub3(m,C))[2]<=1e-9;}
   const M=bodyMesh(b),cen=avg3(M.V);let best=null,bd=Infinity;
@@ -2379,7 +2397,8 @@ function render3D(T){
       const at=(a,b)=>[p0[0]+u[0]*a+v[0]*b,p0[1]+u[1]*a+v[1]*b,p0[2]+u[2]*a+v[2]*b];
       const sh=0.6+0.4*Math.abs(dot3(rot(nh),LV));const col=shadeRGB(rgb,sh).join(',');
       const secs=[];for(const b of st.o3){if(b.type!=='body'||!b.visible)continue;const sp=bodySection(b,pl0);if(sp)secs.push({b,sp});}
-      const secOnly=(o.secOnly!=null?o.secOnly:st.opt.secOnly)&&secs.length>0;
+      const wantSec=(o.secOnly!=null?o.secOnly:st.opt.secOnly),hull=wantSec&&!secs.length?segSection(o,pl0):null;
+      const secOnly=wantSec&&(secs.length>0||!!hull);
       if(!secOnly){
         for(let i=0;i<T2;i++)for(let j=0;j<T2;j++){
           const a=ra0+i*sa,b=rb0+j*sb;const poly=[at(a,b),at(a+sa,b),at(a+sa,b+sb),at(a,b+sb)];const pp=poly.map(pr);
@@ -2389,7 +2408,9 @@ function render3D(T){
         st.pick.planes.push({id:o.id,poly:outline,pl:pl0});
         for(let i=0;i<outline.length;i++){const A=outline[i],B=outline[(i+1)%outline.length];items.push({k:'line',d:Math.min(A[2],B[2])-1e-3,a:A,b:B,color:ec,lw:1.4});}
         if(outline.length){const top=outline.reduce((m,q)=>q[1]<m[1]?q:m,outline[0]);labels.push({x:top[0],y:top[1],ox:10,oy:14,t:o.name,color:ec,greek:true,owner:o,key:'n'});}
-      } else secs.forEach(s=>st.pick.planes.push({id:o.id,poly:s.sp.map(pr),pl:pl0}));
+      } else {secs.forEach(s=>st.pick.planes.push({id:o.id,poly:s.sp.map(pr),pl:pl0}));if(hull)st.pick.planes.push({id:o.id,poly:hull.map(pr),pl:pl0});}
+      if(hull){const pp=hull.map(pr);items.push({k:'poly',d:pp.reduce((q,x)=>q+x[2],0)/pp.length-0.02,pts:pp,fill:`rgba(${shadeRGB(rgb,0.9).join(',')},${fillA(o,0.55)})`});
+        for(let i=0;i<pp.length;i++){const A=pp[i],B=pp[(i+1)%pp.length];items.push({k:'line',d:Math.min(A[2],B[2])-0.03,a:A,b:B,color:ec,lw:2.2});}}
       if(st.opt.sections||secOnly)for(const {b,sp} of secs){
         const pp=sp.map(pr);
         items.push({k:'poly',d:pp.reduce((q,x)=>q+x[2],0)/pp.length-0.02,pts:pp,fill:`rgba(${shadeRGB(rgb,0.9).join(',')},${secOnly?fillA(o,0.55):Math.min(1,fillA(o,0.33)*1.9)})`});
@@ -2957,7 +2978,8 @@ function describe0(o){
       const R=o.refs||[],nmr=refName;let d='';
       if(o.type==='plane3')d={ppp:' = ('+R.map(nmr).join('')+')',ll:', през '+nmr(R[0])+' и '+nmr(R[1]),lp:', през '+nmr(R[0])+' и '+nmr(R[1]),ppar:', през '+nmr(R[1]===undefined?R[0]:R[0])+' ∥ '+nmr(R[1]),pperp:', през '+nmr(R[0])+' ⊥ '+nmr(R[1]),lperp:', през '+nmr(R[0])+' ⊥ '+nmr(R[1])}[o.kind]||'';
       let t=o.name+d+(o.type==='plane'?': '+o.src:st.opt.coords3?': '+planeEqStr(pl):'');
-      if(st.opt.sections)st.o3.forEach(b=>{if(b.type!=='body'||!b.visible)return;const sp=bodySection(b,pl);if(sp)t+='; сечение с '+b.name+': S = '+fmt(area3(sp));});
+      let anyB=false;if(st.opt.sections||st.opt.secOnly||o.secOnly)st.o3.forEach(b=>{if(b.type!=='body'||!b.visible)return;const sp=bodySection(b,pl);if(sp){anyB=true;t+='; сечение с '+b.name+': S = '+fmt(area3(sp));}});
+      if(!anyB&&(o.secOnly!=null?o.secOnly:st.opt.secOnly)){const h=segSection(o,pl);if(h)t+='; сечение '+(h.length===3?'(триъгълник)':'('+h.length+'-ъгълник)')+': S = '+fmt(area3(h));}
       return t;}
     case 'line3':{const l=lineOf3(o);const R=o.refs,nmr=refName;
       if(o.kind==='seg'){const a=ptOf(R[0]),b=ptOf(R[1]);return 'отсечка '+o.name+(a&&b?' = '+fmt(len3(sub3(b,a))):'');}
